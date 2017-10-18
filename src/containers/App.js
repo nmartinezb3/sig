@@ -1,4 +1,6 @@
 import React, { Component } from 'react';
+import * as esriLoader from 'esri-loader';
+
 import '../styles/App.css';
 import Map from './Map'
 import GeocodeSearchInput from '../components/GeocodeSearchInput'
@@ -8,8 +10,41 @@ class App extends Component {
     super(props)
     this.state = {
       firstPoint: true,
-      searchPlaceholder: 'Ingrese Origen'
     }
+  }
+  componentWillMount() {
+    esriLoader.bootstrap((err) => {
+      if (err) {
+        console.error(err);
+      } else {
+        console.log('ESRI loaded')
+        this.login();
+      }
+    }, {
+      // use a specific version instead of latest 4.x
+      url: 'https://js.arcgis.com/3.22/'
+    })
+  }
+  login() {
+    esriLoader.dojoRequire(
+      ['esri/arcgis/OAuthInfo',
+        'esri/IdentityManager'],
+      (OAuthInfo, esriId) => {
+        const info = new OAuthInfo({
+          appId: 'oV9loJuupFSMCbK4',
+          popup: false
+        });
+        esriId.registerOAuthInfos([info]);
+        console.log('asdsadasdklasldasl')
+        esriId.getCredential(`${info.portalUrl}/sharing`);
+
+        esriId.checkSignInStatus(`${info.portalUrl}/sharing`).then(() => {
+          console.log('success login')
+        }).otherwise(() => {
+          console.log('error login')
+        });
+      }
+    )
   }
 
   onSelectLocation = (data) => {
@@ -30,8 +65,10 @@ class App extends Component {
           name: data.result.name
         }
       })
+      this.refs.map.calculateRoute()
     }
   }
+
 
   render() {
     return (
