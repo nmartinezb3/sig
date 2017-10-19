@@ -4,13 +4,18 @@ import * as esriLoader from 'esri-loader';
 import '../styles/App.css';
 import Map from './Map'
 import GeocodeSearchInput from '../components/GeocodeSearchInput'
+import GPS from '../utils/gps'
 
 class App extends Component {
   constructor(props) {
     super(props)
     this.state = {
       firstPoint: true,
+      speed: 100000
     }
+    this.gps = new GPS()
+    this.hasNewCoordinate = this.hasNewCoordinate.bind(this)
+    this.onChangeSpeed = this.onChangeSpeed.bind(this)
   }
   componentWillMount() {
     esriLoader.bootstrap((err) => {
@@ -35,40 +40,41 @@ class App extends Component {
           popup: false
         });
         esriId.registerOAuthInfos([info]);
-        console.log('asdsadasdklasldasl')
         esriId.getCredential(`${info.portalUrl}/sharing`);
-
         esriId.checkSignInStatus(`${info.portalUrl}/sharing`).then(() => {
-          console.log('success login')
+
         }).otherwise(() => {
-          console.log('error login')
+
         });
       }
     )
   }
 
   onSelectLocation = (data) => {
-    if (this.state.firstPoint) {
+    if (!this.stops) {
       this.refs.map.addMarker(data, 'Origen')
-      this.setState({
-        firstPoint: false,
-        origin: {
-          geometry: data.result.feature.geometry,
-          name: data.result.name
-        }
-      })
+      this.stops = [data.result.feature]
     } else {
       this.refs.map.addMarker(data, 'Destino')
-      this.setState({
-        destination: {
-          geometry: data.result.feature.geometry,
-          name: data.result.name
-        }
-      })
-      this.refs.map.calculateRoute()
+      this.stops.push(data.result.feature)
+      this.refs.map.hidePopup()
+      this.gps.startNavigation(this.stops, this.state.speed, this.hasNewCoordinate)
     }
   }
 
+  hasNewCoordinate(coordinate, isFirst) {
+    if (isFirst) {
+      this.refs.map.addCar(coordinate)
+    } else {
+      this.refs.map.updateCarPosition(coordinate)
+    }
+    console.log(coordinate)
+  }
+
+  onChangeSpeed(e) {
+    this.gps.setSpeed(e.target.value)
+    this.setState({speed: e.target.value})
+  }
 
   render() {
     return (
@@ -84,6 +90,12 @@ class App extends Component {
           onSelectLocation={this.onSelectLocation}
           placeholder='Ingrese un destino'
 
+        />
+        <input
+          type="number"
+          placeholder="Velocidad (km/h)"
+          value={this.state.speed}
+          onChange={this.onChangeSpeed}
         />
       </Map>
     </div>
