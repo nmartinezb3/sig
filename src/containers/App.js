@@ -91,9 +91,17 @@ class App extends Component {
           placeholder='Ingrese un destino'
 
         />
-        <input
+        {/* <input
           type="number"
           placeholder="Velocidad (km/h)"
+          value={this.state.speed}
+          onChange={this.onChangeSpeed}
+        /> */}
+        <input
+          type="range"
+          name="points"
+          min="0"
+          max="1000000000"
           value={this.state.speed}
           onChange={this.onChangeSpeed}
         />

@@ -32,7 +32,7 @@ class GPS {
   }
 
   start() {
-    this.getNewCoordinate()
+    // this.getNewCoordinate()
     this.timer = setInterval(this.getNewCoordinate, this.getInterval())
   }
 
