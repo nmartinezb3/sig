@@ -4,6 +4,7 @@ class GPS {
   constructor() {
     this.iteration = 0
     this.getNewCoordinate = this.getNewCoordinate.bind(this)
+    this.startNavigation = this.startNavigation.bind(this)
   }
 
   setSpeed(speed) {
@@ -32,7 +33,9 @@ class GPS {
   }
 
   start() {
-    // this.getNewCoordinate()
+    if (this.iteration === 0) {
+      this.getNewCoordinate()
+    }
     this.timer = setInterval(this.getNewCoordinate, this.getInterval())
   }
 
@@ -53,16 +56,15 @@ class GPS {
         wkid: 102100
       };
       stops.forEach(stop => routeParams.stops.features.push(stop))
-      const gpsThis = this
       routeTask.on('solve-complete', (evt) => {
         const routeResult = evt.result.routeResults[0]
-        gpsThis.coordinates = routeResult.route.geometry.paths[0]
-        gpsThis.distance = routeResult.route.attributes.Total_Kilometers
-        gpsThis.speed = speed
-        gpsThis.callback = coordinateCallback
+        this.coordinates = routeResult.route.geometry.paths[0]
+        this.distance = routeResult.route.attributes.Total_Kilometers
+        this.speed = speed
+        this.callback = coordinateCallback
 
         // start simulating gps
-        gpsThis.start()
+        this.start()
       });
 
       routeTask.on('error', (err) => {
