@@ -146,7 +146,7 @@ class Map extends Component {
             <div className="col-md-3">
               <div className="childs-container">
                 {
-                  this.props.children.map((ch, index) => React.cloneElement(ch, { map: this.map, index }))
+                  this.props.children.map((ch, index) => React.cloneElement(ch, { map: this.map, key: index }))
                 }
             </div>
             </div>
