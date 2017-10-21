@@ -49,13 +49,16 @@ class GPS {
       'esri/tasks/RouteParameters',
       'esri/tasks/FeatureSet',
     ], (RouteTask, RouteParameters, FeatureSet) => {
+      this.iteration = 0
       const routeTask = new RouteTask('https://route.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World');
       const routeParams = new RouteParameters();
       routeParams.stops = new FeatureSet();
       routeParams.outSpatialReference = {
         wkid: 102100
       };
-      stops.forEach(stop => routeParams.stops.features.push(stop))
+      stops.map(stop => stop.result.feature.geometry)
+      routeParams.stops.features = stops.map(stop => stop.result.feature)
+
       routeTask.on('solve-complete', (evt) => {
         const routeResult = evt.result.routeResults[0]
         this.coordinates = routeResult.route.geometry.paths[0]

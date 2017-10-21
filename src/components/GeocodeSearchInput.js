@@ -9,6 +9,8 @@ class GeocodeSearchInput extends Component {
     this.state = {
 
     };
+
+    this.onSelectLocation = this.onSelectLocation.bind(this)
   }
 
   componentWillReceiveProps(nextProps) {
@@ -18,6 +20,11 @@ class GeocodeSearchInput extends Component {
       })
       this.renderInput()
     }
+  }
+
+  onSelectLocation(data) {
+    this.geocoder.clear()
+    this.props.onSelectLocation(data)
   }
 
   renderInput() {
@@ -34,7 +41,7 @@ class GeocodeSearchInput extends Component {
         }, dom.byId(`geocode-search-input-${this.props.index}`));
         this.geocoder.startup();
 
-        this.geocoder.on('select', this.props.onSelectLocation);
+        this.geocoder.on('select', this.onSelectLocation);
       }
     )
   }

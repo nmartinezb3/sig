@@ -11,11 +11,13 @@ class App extends Component {
     super(props)
     this.state = {
       firstPoint: true,
-      speed: 100000
+      speed: 100000,
+      stops: []
     }
     this.gps = new GPS()
-    this.hasNewCoordinate = this.hasNewCoordinate.bind(this)
     this.onChangeSpeed = this.onChangeSpeed.bind(this)
+    this.startNavigation = this.startNavigation.bind(this)
+    this.onSelectLocation = this.onSelectLocation.bind(this)
   }
   componentWillMount() {
     esriLoader.bootstrap((err) => {
@@ -50,25 +52,27 @@ class App extends Component {
     )
   }
 
-  onSelectLocation = (data) => {
-    if (!this.stops) {
-      this.refs.map.addMarker(data, 'Origen')
-      this.stops = [data.result.feature]
-    } else {
-      this.refs.map.addMarker(data, 'Destino')
-      this.stops.push(data.result.feature)
-      this.refs.map.hidePopup()
-      this.gps.startNavigation(this.stops, this.state.speed, this.hasNewCoordinate)
-    }
+  onSelectLocation(data) {
+    const { stops } = this.state
+    // const newData = JSON.parse(JSON.stringify(data))
+    stops.push(data)
+    this.setState({
+      stops
+    })
+    this.refs.map.addMarker(data, 'Origen')
   }
 
-  hasNewCoordinate(coordinate, isFirst) {
-    if (isFirst) {
-      this.refs.map.addCar(coordinate)
-    } else {
-      this.refs.map.updateCarPosition(coordinate)
-    }
-    console.log(coordinate)
+  startNavigation() {
+    this.refs.map.hidePopup()
+    console.log(this.state.stops.map(s => s.result.feature.geometry))
+    this.gps.startNavigation(this.state.stops, this.state.speed, (coordinate, isFirst) => {
+      if (isFirst) {
+        this.refs.map.addCar(coordinate)
+      } else {
+        this.refs.map.updateCarPosition(coordinate)
+      }
+      console.log(coordinate)
+    })
   }
 
   onChangeSpeed(e) {
@@ -79,32 +83,35 @@ class App extends Component {
   render() {
     return (
     <div className="app">
+      <div className="header">
+        SIG
+      </div>
       <Map ref="map">
         <GeocodeSearchInput
-          index={1}
           onSelectLocation={this.onSelectLocation}
-          placeholder='Ingrese un origen'
+          placeholder='Ingrese una ubicación'
         />
-        <GeocodeSearchInput
-          index={2}
-          onSelectLocation={this.onSelectLocation}
-          placeholder='Ingrese un destino'
+        <div className="destinations">{this.state.stops.length > 0 && <span>Destinos:</span>}</div>
+        <ul>
+          {this.state.stops.map((stop, index) => (
+            <li key={index}>
+              {stop.result.name}
+            </li>
+          ))}
+        </ul>
+        <button className="btn btn-success start-navigation-button" onClick={this.startNavigation}>Iniciar navegación</button>
+        <div className="speed">
+          Velocidad:
+          <input
+            type="range"
+            name="points"
+            min="0"
+            max="100000000"
+            value={this.state.speed}
+            onChange={this.onChangeSpeed}
+          />
 
-        />
-        {/* <input
-          type="number"
-          placeholder="Velocidad (km/h)"
-          value={this.state.speed}
-          onChange={this.onChangeSpeed}
-        /> */}
-        <input
-          type="range"
-          name="points"
-          min="0"
-          max="1000000000"
-          value={this.state.speed}
-          onChange={this.onChangeSpeed}
-        />
+        </div>
       </Map>
     </div>
     );

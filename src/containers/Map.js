@@ -26,10 +26,6 @@ class Map extends Component {
         center: [-122.45, 37.75],
         zoom: 13
       });
-      // new MapView({
-      //   map: this.map,
-      //   container: 'map-container',
-      // });
       this.setState({
         loaded: true
       })
@@ -85,6 +81,10 @@ class Map extends Component {
     })
   }
 
+  removeCar() {
+    this.map.graphics.remove(this.car)
+  }
+
   updateCarPosition(coordinates) {
     esriLoader.dojoRequire([
       'esri/geometry/Point',
@@ -92,7 +92,7 @@ class Map extends Component {
       const p = new Point(coordinates[0], coordinates[1], this.map.spatialReference)
       console.log('updating car', p)
       this.car.setGeometry(p)
-      this.car.show()
+      // this.car.show()
     })
   }
 
@@ -134,11 +134,19 @@ class Map extends Component {
 
   render() {
     return (
-      <div id="map-container">
-        {
-          this.props.children.map((ch, index) => React.cloneElement(ch, { map: this.map, index }))
-        }
-      </div>
+        <div className="main">
+          <div className="row">
+            <div id="map-container" className="col-md-9">
+            </div>
+            <div className="col-md-3">
+              <div className="childs-container">
+                {
+                  this.props.children.map((ch, index) => React.cloneElement(ch, { map: this.map, index }))
+                }
+            </div>
+            </div>
+          </div>
+        </div>
     );
   }
 }
