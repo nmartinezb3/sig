@@ -10,9 +10,13 @@
     align-items: center;
     padding: 24px;
     font-size: 24px;
+    position: fixed;
+    z-index: 99999;
+    width: 100%;
   }
   .main {
     height: 100vh;
+    padding-top: 61px;
     .row {
       height: 100%;
     }
@@ -22,6 +26,9 @@
 .start-navigation-button {
   width: 100%;
   margin: 17px 0;
+}
+.disabled {
+  cursor: not-allowed;
 }
 
 .speed {

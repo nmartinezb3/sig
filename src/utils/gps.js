@@ -29,6 +29,7 @@ class GPS {
       this.callback(coordinate, isFirst)
     } else {
       this.stop()
+      this.onFinishNavigationCallback()
     }
   }
 
@@ -43,7 +44,12 @@ class GPS {
     clearInterval(this.timer)
   }
 
-  startNavigation(stops, speed, coordinateCallback) {
+  stopNavigation() {
+    this.stop()
+    this.iteration = 0
+  }
+
+  startNavigation(stops, speed, coordinateCallback, onRouteLoadedCallback, onFinishNavigationCallback) {
     esriLoader.dojoRequire([
       'esri/tasks/RouteTask',
       'esri/tasks/RouteParameters',
@@ -61,10 +67,13 @@ class GPS {
 
       routeTask.on('solve-complete', (evt) => {
         const routeResult = evt.result.routeResults[0]
+        onRouteLoadedCallback(routeResult.route)
+
         this.coordinates = routeResult.route.geometry.paths[0]
         this.distance = routeResult.route.attributes.Total_Kilometers
         this.speed = speed
         this.callback = coordinateCallback
+        this.onFinishNavigationCallback = onFinishNavigationCallback
 
         // start simulating gps
         this.start()

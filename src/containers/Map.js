@@ -13,6 +13,7 @@ class Map extends Component {
     this.stops = []
     this.addCar = this.addCar.bind(this)
     this.updateCarPosition = this.updateCarPosition.bind(this)
+    this.addRoute = this.addRoute.bind(this)
   }
   componentDidMount() {
     this.createMap();
@@ -36,10 +37,14 @@ class Map extends Component {
     this.map.graphics.clear();
   }
 
-  // startNavigation(coordinates) {
-  //   const i = 0
-  //   // this.gps = new GPS(coordinates, speed)
-  // }
+  addRoute(route) {
+    const extent = route.geometry.getExtent()
+    this.map.setExtent(extent)
+    esriLoader.dojoRequire(['esri/symbols/SimpleLineSymbol', 'esri/Color'], (SimpleLineSymbol, Color) => {
+      const routeSymbol = new SimpleLineSymbol().setColor(new Color([0, 0, 255, 0.5])).setWidth(5);
+      this.map.graphics.add(route.setSymbol(routeSymbol));
+    })
+  }
 
   stopTimer() {
     clearInterval(this.timer)

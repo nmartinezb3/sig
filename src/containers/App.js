@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import * as esriLoader from 'esri-loader';
-
+import className from 'classnames'
 import '../styles/App.css';
 import Map from './Map'
 import GeocodeSearchInput from '../components/GeocodeSearchInput'
@@ -18,6 +18,7 @@ class App extends Component {
     this.onChangeSpeed = this.onChangeSpeed.bind(this)
     this.startNavigation = this.startNavigation.bind(this)
     this.onSelectLocation = this.onSelectLocation.bind(this)
+    this.onClickStartStopNavigation = this.onClickStartStopNavigation.bind(this)
   }
   componentWillMount() {
     esriLoader.bootstrap((err) => {
@@ -64,15 +65,36 @@ class App extends Component {
 
   startNavigation() {
     this.refs.map.hidePopup()
-    console.log(this.state.stops.map(s => s.result.feature.geometry))
-    this.gps.startNavigation(this.state.stops, this.state.speed, (coordinate, isFirst) => {
-      if (isFirst) {
-        this.refs.map.addCar(coordinate)
-      } else {
-        this.refs.map.updateCarPosition(coordinate)
+
+    this.gps.startNavigation(
+      this.state.stops, this.state.speed,
+      (coordinate, isFirst) => {
+        // on new coordinate
+        if (isFirst) {
+          this.refs.map.addCar(coordinate)
+          this.setState({
+            navigationActive: true
+          })
+        } else {
+          this.refs.map.updateCarPosition(coordinate)
+        }
+        console.log(coordinate)
+      },
+      (route) => {
+        // on route loaded
+        this.setState({
+          routeKm: route.attributes.Total_Kilometers,
+          routeName: route.attributes.Name
+        })
+        this.refs.map.addRoute(route)
+      },
+      () => {
+        // on finish navigation
+        this.setState({
+          navigationActive: false
+        })
       }
-      console.log(coordinate)
-    })
+    )
   }
 
   onChangeSpeed(e) {
@@ -80,6 +102,20 @@ class App extends Component {
     this.setState({speed: e.target.value})
   }
 
+  onClickStartStopNavigation() {
+    if (this.state.stops.length < 2) {
+      return
+    }
+    if (this.state.navigationActive) {
+      this.gps.stopNavigation()
+      this.refs.map.clearGraphicLayer()
+      this.setState({
+        navigationActive: false
+      })
+    } else {
+      this.startNavigation()
+    }
+  }
   render() {
     return (
     <div className="app">
@@ -99,7 +135,11 @@ class App extends Component {
             </li>
           ))}
         </ul>
-        <button className="btn btn-success start-navigation-button" onClick={this.startNavigation}>Iniciar navegación</button>
+        <button
+          className={className({'btn btn-success start-navigation-button': true, disabled: this.state.stops.length < 2})}
+          onClick={this.onClickStartStopNavigation}>
+          {!this.state.navigationActive ? 'Iniciar navegación' : 'Parar navegación'}
+        </button>
         <div className="speed">
           Velocidad:
           <input
