@@ -23,6 +23,12 @@
   }
 }
 
+.pointer {
+  cursor: pointer;
+}
+.add-location {
+  margin-left: 10px;
+}
 .start-navigation-button {
   width: 100%;
   margin: 17px 0;
@@ -37,4 +43,13 @@
 
 .destinations {
   margin-top: 12px;
+}
+.old-destinations-container {
+  margin-top: 25px;
+}
+
+.old-destinations {
+  margin-top: 12px;
+  max-height: 140px;
+  overflow: auto;
 }

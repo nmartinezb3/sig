@@ -12,13 +12,17 @@ class App extends Component {
     this.state = {
       firstPoint: true,
       speed: 100000,
-      stops: []
+      stops: [],
+      destinations: [],
+      serverFeatures: []
     }
     this.gps = new GPS()
     this.onChangeSpeed = this.onChangeSpeed.bind(this)
     this.startNavigation = this.startNavigation.bind(this)
     this.onSelectLocation = this.onSelectLocation.bind(this)
     this.onClickStartStopNavigation = this.onClickStartStopNavigation.bind(this)
+    this.deleteOldDestinations = this.deleteOldDestinations.bind(this)
+    this.loadFeatureServer = this.loadFeatureServer.bind(this)
   }
   componentWillMount() {
     esriLoader.bootstrap((err) => {
@@ -27,12 +31,59 @@ class App extends Component {
       } else {
         console.log('ESRI loaded')
         this.login();
+        this.loadFeatureServer()
       }
     }, {
       // use a specific version instead of latest 4.x
       url: 'https://js.arcgis.com/3.22/'
     })
   }
+
+  loadFeatureServer() {
+    esriLoader.dojoRequire(
+      ['esri/layers/FeatureLayer',
+        'esri/tasks/query'],
+      (FeatureLayer, Query) => {
+        this.featureLayer = new FeatureLayer('http://sampleserver5.arcgisonline.com/arcgis/rest/services/LocalGovernment/Events/FeatureServer/0')
+        this.routesFeatureLayer = new FeatureLayer('http://sampleserver5.arcgisonline.com/arcgis/rest/services/LocalGovernment/Recreation/FeatureServer/1')
+
+        const query = new Query();
+        query.where = "website = 'www.sig-grupo2-2017.com'"
+        query.outFields = ['*'];
+        this.featureLayer.queryFeatures(
+          query,
+          (featureSet) => {
+            const results = featureSet.features
+            this.setState({
+              serverFeatures: results
+            })
+          },
+          (error) => {
+            console.error(error)
+          }
+        );
+
+        const routeQuery = new Query();
+        routeQuery.where = '1 = 1'
+        routeQuery.outFields = ['*'];
+        this.routesFeatureLayer.queryFeatures(
+          routeQuery,
+          (featureSet) => {
+            debugger
+            const results = featureSet.features
+            this.setState({
+              serverRoutes: results
+            })
+          },
+          (error) => {
+            debugger
+            console.error(error)
+          }
+        );
+      }
+    )
+  }
+
   login() {
     esriLoader.dojoRequire(
       ['esri/arcgis/OAuthInfo',
@@ -54,13 +105,35 @@ class App extends Component {
   }
 
   onSelectLocation(data) {
-    const { stops } = this.state
-    // const newData = JSON.parse(JSON.stringify(data))
-    stops.push(data)
+    const { stops, destinations} = this.state
+    stops.push(data.result.feature)
+    destinations.push(data.result.name)
     this.setState({
-      stops
+      stops,
+      destinations
     })
-    this.refs.map.addMarker(data, 'Origen')
+    this.refs.map.addMarker(data, 'Origen', (graphic) => {
+      this.featureLayer.applyEdits(
+        [graphic], null, null,
+        (result) => {
+          console.log(result)
+        },
+        (error) => {
+          console.error(error)
+        }
+      );
+    })
+  }
+
+  onSelectPreviousLocation(feature) {
+    const { stops, destinations} = this.state
+    stops.push(feature)
+    destinations.push(feature.attributes.description)
+    this.setState({
+      stops,
+      destinations
+    })
+    this.refs.map.addMarkerFromPreviousLocation(feature)
   }
 
   startNavigation() {
@@ -87,6 +160,18 @@ class App extends Component {
           routeName: route.attributes.Name
         })
         this.refs.map.addRoute(route)
+        debugger
+        this.routesFeatureLayer.applyEdits(
+          [route], null, null,
+          (result) => {
+            debugger
+            console.log(result)
+          },
+          (error) => {
+            debugger
+            console.error(error)
+          }
+        );
       },
       () => {
         // on finish navigation
@@ -116,6 +201,22 @@ class App extends Component {
       this.startNavigation()
     }
   }
+
+  deleteOldDestinations() {
+    this.featureLayer.applyEdits(
+      null, null, this.state.serverFeatures,
+      (result) => {
+        this.setState({
+          serverFeatures: []
+        })
+        console.log(result)
+      },
+      (error) => {
+        console.error(error)
+      }
+    );
+  }
+
   render() {
     return (
     <div className="app">
@@ -127,11 +228,35 @@ class App extends Component {
           onSelectLocation={this.onSelectLocation}
           placeholder='Ingrese una ubicación'
         />
-        <div className="destinations">{this.state.stops.length > 0 && <span>Destinos:</span>}</div>
+        <div className="old-destinations-container">
+          {this.state.serverFeatures.length > 0 && (
+            <div>
+              <span>Destinos anteriores     </span>
+              <button
+                className="btn btn-danger"
+                onClick={this.deleteOldDestinations}>
+                Eliminar
+              </button>
+            </div>
+          )}
+        </div>
+        <ul className="old-destinations">
+          {
+            this.state.serverFeatures.map((f, index) => (
+              <li key={index} >
+                <div>
+                  <span>{f.attributes.description}</span>
+                  <i className="fa fa-plus pointer add-location" aria-hidden="true" onClick={() => this.onSelectPreviousLocation(f)}></i>
+                </div>
+              </li>
+            ))
+          }
+        </ul>
+        <div className="destinations">{this.state.stops.length > 0 && <span>Destinos seleccionados:</span>}</div>
         <ul>
-          {this.state.stops.map((stop, index) => (
+          {this.state.destinations.map((dest, index) => (
             <li key={index}>
-              {stop.result.name}
+              {dest}
             </li>
           ))}
         </ul>
@@ -150,7 +275,6 @@ class App extends Component {
             value={this.state.speed}
             onChange={this.onChangeSpeed}
           />
-
         </div>
       </Map>
     </div>

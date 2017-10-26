@@ -49,7 +49,7 @@ class GPS {
     this.iteration = 0
   }
 
-  startNavigation(stops, speed, coordinateCallback, onRouteLoadedCallback, onFinishNavigationCallback) {
+  startNavigation(features, speed, coordinateCallback, onRouteLoadedCallback, onFinishNavigationCallback) {
     esriLoader.dojoRequire([
       'esri/tasks/RouteTask',
       'esri/tasks/RouteParameters',
@@ -62,11 +62,12 @@ class GPS {
       routeParams.outSpatialReference = {
         wkid: 102100
       };
-      stops.map(stop => stop.result.feature.geometry)
-      routeParams.stops.features = stops.map(stop => stop.result.feature)
+      // stops.map(stop => stop.result.feature.geometry)
+      routeParams.stops.features = features
 
       routeTask.on('solve-complete', (evt) => {
         const routeResult = evt.result.routeResults[0]
+        routeResult.route.notes = `${routeResult.route.name}--sig2017g2`
         onRouteLoadedCallback(routeResult.route)
 
         this.coordinates = routeResult.route.geometry.paths[0]

@@ -50,7 +50,7 @@ class Map extends Component {
     clearInterval(this.timer)
   }
 
-  addMarker(data, title) {
+  addMarker(data, title, onMarkerAdded) {
     esriLoader.dojoRequire([
       'esri/symbols/SimpleMarkerSymbol',
       'dojo/_base/Color',
@@ -62,12 +62,35 @@ class Map extends Component {
         .setColor(new Color([255, 0, 0, 0.5]))
         .setSize(15);
       symbol.outline.setWidth(4);
-      const graphic = new Graphic(point, symbol);
+      const attr = {description: data.result.name, website: 'www.sig-grupo2-2017.com'};
+      const graphic = new Graphic(point, symbol, attr);
       const stop = this.map.graphics.add(graphic);
       this.stops.push(stop)
       this.map.infoWindow.setTitle(title);
       this.map.infoWindow.setContent(data.result.name);
       this.map.infoWindow.show(data.result.feature.geometry);
+      onMarkerAdded(graphic)
+    })
+  }
+
+  addMarkerFromPreviousLocation(feature, title) {
+    esriLoader.dojoRequire([
+      'esri/symbols/SimpleMarkerSymbol',
+      'dojo/_base/Color',
+      'esri/graphic',
+    ], (SimpleMarkerSymbol, Color, Graphic) => {
+      const symbol = new SimpleMarkerSymbol()
+        .setStyle(SimpleMarkerSymbol.STYLE_CROSS)
+        .setColor(new Color([255, 0, 0, 0.5]))
+        .setSize(15);
+      symbol.outline.setWidth(4);
+      const graphic = new Graphic(feature.geometry, symbol);
+      const stop = this.map.graphics.add(graphic);
+      this.stops.push(stop)
+      this.map.infoWindow.setTitle(title);
+      this.map.infoWindow.setContent(feature.attributes.description);
+      this.map.infoWindow.show(feature.geometry);
+      this.map.centerAt(feature.geometry);
     })
   }
 
