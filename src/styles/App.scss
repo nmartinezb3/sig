@@ -23,6 +23,12 @@
   }
 }
 
+.pointer {
+  cursor: pointer;
+}
+.add-location {
+  margin-left: 10px;
+}
 .start-navigation-button {
   width: 100%;
   margin: 17px 0;
@@ -31,10 +37,27 @@
   cursor: not-allowed;
 }
 
+.list-item-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 .speed {
   margin-left: 17px;
 }
 
 .destinations {
+  margin-top: 25px;
+}
+.old-destinations-container {
+  margin-top: 25px;
+}
+
+.old-destinations {
   margin-top: 12px;
+}
+
+.list-group {
+  max-height: 133px;
+  overflow: auto;
 }

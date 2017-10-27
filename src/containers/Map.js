@@ -70,11 +70,20 @@ class Map extends Component {
     })
   }
 
+  addRouteAndPoints(route) {
+    const extent = route.geometry.getExtent()
+    this.map.setExtent(extent)
+    esriLoader.dojoRequire(['esri/symbols/SimpleLineSymbol', 'esri/Color'], (SimpleLineSymbol, Color) => {
+      const routeSymbol = new SimpleLineSymbol().setColor(new Color([0, 0, 255, 0.5])).setWidth(5);
+      this.map.graphics.add(route.setSymbol(routeSymbol));
+    })
+  }
+
   stopTimer() {
     clearInterval(this.timer)
   }
 
-  addMarker(data, title) {
+  addMarker(data, title, onMarkerAdded) {
     esriLoader.dojoRequire([
       'esri/symbols/SimpleMarkerSymbol',
       'dojo/_base/Color',
@@ -86,12 +95,59 @@ class Map extends Component {
         .setColor(new Color([255, 0, 0, 0.5]))
         .setSize(15);
       symbol.outline.setWidth(4);
-      const graphic = new Graphic(point, symbol);
+      const attr = {description: data.result.name, website: 'www.sig-grupo2-2017.com'};
+      const graphic = new Graphic(point, symbol, attr);
       const stop = this.map.graphics.add(graphic);
       this.stops.push(stop)
       this.map.infoWindow.setTitle(title);
       this.map.infoWindow.setContent(data.result.name);
       this.map.infoWindow.show(data.result.feature.geometry);
+      onMarkerAdded(graphic)
+    })
+  }
+
+  addMarkerFromPreviousLocation(feature, title) {
+    esriLoader.dojoRequire([
+      'esri/symbols/SimpleMarkerSymbol',
+      'dojo/_base/Color',
+      'esri/graphic',
+    ], (SimpleMarkerSymbol, Color, Graphic) => {
+      const symbol = new SimpleMarkerSymbol()
+        .setStyle(SimpleMarkerSymbol.STYLE_CROSS)
+        .setColor(new Color([255, 0, 0, 0.5]))
+        .setSize(15);
+      symbol.outline.setWidth(4);
+      const graphic = new Graphic(feature.geometry, symbol);
+      const stop = this.map.graphics.add(graphic);
+      this.stops.push(stop)
+      this.map.infoWindow.setTitle(title);
+      this.map.infoWindow.setContent(feature.attributes.description);
+      this.map.infoWindow.show(feature.geometry);
+      this.map.centerAt(feature.geometry);
+    })
+  }
+
+  addMarkerFromCoordinates(coordinates, wkid) {
+    esriLoader.dojoRequire([
+      'esri/symbols/SimpleMarkerSymbol',
+      'dojo/_base/Color',
+      'esri/graphic',
+      'esri/geometry/Point',
+      'esri/SpatialReference'
+    ], (SimpleMarkerSymbol, Color, Graphic, Point, SpatialReference) => {
+      const symbol = new SimpleMarkerSymbol()
+        .setStyle(SimpleMarkerSymbol.STYLE_CROSS)
+        .setColor(new Color([255, 0, 0, 0.5]))
+        .setSize(15);
+      symbol.outline.setWidth(4);
+      const point = new Point(coordinates, new SpatialReference({ wkid }));
+      const graphic = new Graphic(point, symbol);
+      const stop = this.map.graphics.add(graphic);
+      this.stops.push(stop)
+      // this.map.infoWindow.setTitle(title);
+      // this.map.infoWindow.setContent('');
+      // this.map.infoWindow.show(point);
+      this.map.centerAt(point);
     })
   }
 
@@ -212,12 +268,12 @@ class Map extends Component {
     return (
         <div className="main">
           <div className="row">
-            <div id="map-container" className="col-md-9">
+            <div id="map-container" className="col-md-8">
             </div>
-            <div className="col-md-3">
+            <div className="col-md-4">
               <div className="childs-container">
                 {
-                  this.props.children.map((ch, index) => React.cloneElement(ch, { map: this.map, index }))
+                  this.props.children.map((ch, index) => React.cloneElement(ch, { map: this.map, key: index }))
                 }
             </div>
             </div>
