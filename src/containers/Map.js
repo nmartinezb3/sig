@@ -4,6 +4,7 @@ import * as esriLoader from 'esri-loader';
 import '../styles/Map.css'
 
 class Map extends Component {
+  
   constructor(props) {
     super(props);
 
@@ -11,22 +12,45 @@ class Map extends Component {
       time: 1000,
     };
     this.stops = []
+    
     this.addCar = this.addCar.bind(this)
     this.updateCarPosition = this.updateCarPosition.bind(this)
     this.addRoute = this.addRoute.bind(this)
+    this.showBuffer = this.showBuffer.bind(this);
+    this.doBuffer = this.doBuffer.bind(this);
   }
+
   componentDidMount() {
     this.createMap();
   }
 
 
   createMap() {
-    esriLoader.dojoRequire(['esri/map'], (Map) => {
+    esriLoader.dojoRequire([
+      'esri/map',
+      'esri/layers/FeatureLayer',
+      'esri/layers/ArcGISTiledMapServiceLayer'
+    ],(
+      Map,
+      FeatureLayer,
+      ArcGISTiledMapServiceLayer,
+    )=>{
       this.map = new Map('map-container', {
-        basemap: 'topo',
-        center: [-122.45, 37.75],
-        zoom: 13
+        basemap: "topo",
+        center: [-97.00, 39.90],
+        zoom: 5
       });
+
+      var basemap = new ArcGISTiledMapServiceLayer("http://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer");
+
+      var layerPoblacion = new FeatureLayer('https://services.arcgisonline.com/arcgis/rest/services/Demographics/USA_1990-2000_Population_Change/MapServer/3', {
+        opacity: 0.5,
+      });
+      // var layerPoblacion = new FeatureLayer('https://services.arcgis.com/V6ZHFr6zdgNZuVG0/arcgis/rest/services/Landscape_Trees/FeatureServer/0');
+      //this.map.addLayers([basemap, layerPoblacion]);
+
+      //this.map.on("click", this.doBuffer);
+
       this.setState({
         loaded: true
       })
@@ -80,11 +104,58 @@ class Map extends Component {
       const sms = new SimpleMarkerSymbol().setStyle(SimpleMarkerSymbol.STYLE_CIRCLE).setColor(new Color([255, 0, 0, 0.5]));
       const attr = {Xcoord: coordinates[0], Ycoord: coordinates[1], Plant: 'Mesa Mint'};
 
+      this.doBuffer(pt);
+
       this.car = new Graphic(pt, sms, attr);
 
       this.map.graphics.add(this.car);
     })
   }
+
+  showBuffer(bufferedGeometries){
+    esriLoader.dojoRequire([
+      'esri/symbols/SimpleFillSymbol',
+      'esri/symbols/SimpleLineSymbol',
+      'esri/Color',
+      'esri/graphic',
+    ], (SimpleFillSymbol, SimpleLineSymbol, Color, Graphic)=>{
+      console.log("entro a la funcion");
+      var symbol = new SimpleFillSymbol(
+        SimpleFillSymbol.STYLE_SOLID,
+        new SimpleLineSymbol(
+          SimpleLineSymbol.STYLE_SOLID,
+          new Color([0,0,255,0.65]), 2
+        ),
+        new Color([0,0,255,0.35])
+      );
+      console.log("se llego al for sin error");
+      for (var geoPos in bufferedGeometries){
+        var geometry = bufferedGeometries[geoPos];
+        var graph = new Graphic(geometry, symbol);
+        this.map.graphics.add(graph);
+      }
+    })
+  }
+
+  doBuffer(point){
+    esriLoader.dojoRequire([
+      'esri/tasks/BufferParameters',
+      'esri/tasks/GeometryService',
+    ], (BufferParameters, GeometryService) =>{
+      var params = new BufferParameters();
+      params.geometries = [ point ]; 
+      params.distances = [ 10 ];
+      params.outSpatialReference = this.map.spatialReference;
+      params.unit = GeometryService.UNIT_KILOMETER;
+
+      this.gsvc = new GeometryService('https://utility.arcgisonline.com/ArcGIS/rest/services/Geometry/GeometryServer');
+      
+      this.gsvc.buffer(params, this.showBuffer);
+
+    })
+   
+  }
+
 
   removeCar() {
     this.map.graphics.remove(this.car)
