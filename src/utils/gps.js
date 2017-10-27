@@ -67,7 +67,9 @@ class GPS {
 
       routeTask.on('solve-complete', (evt) => {
         const routeResult = evt.result.routeResults[0]
-        routeResult.route.notes = `${routeResult.route.name}--sig2017g2`
+        routeResult.route.attributes.notes = routeResult.route.attributes.Name
+        routeResult.route.attributes.trailtype = 19178
+
         onRouteLoadedCallback(routeResult.route)
 
         this.coordinates = routeResult.route.geometry.paths[0]

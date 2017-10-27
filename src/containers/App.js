@@ -14,7 +14,8 @@ class App extends Component {
       speed: 100000,
       stops: [],
       destinations: [],
-      serverFeatures: []
+      serverFeatures: [],
+      serverRoutes: []
     }
     this.gps = new GPS()
     this.onChangeSpeed = this.onChangeSpeed.bind(this)
@@ -23,6 +24,8 @@ class App extends Component {
     this.onClickStartStopNavigation = this.onClickStartStopNavigation.bind(this)
     this.deleteOldDestinations = this.deleteOldDestinations.bind(this)
     this.loadFeatureServer = this.loadFeatureServer.bind(this)
+    this.deleteOldRoutes = this.deleteOldRoutes.bind(this)
+    this.onSelectPreviousRoute = this.onSelectPreviousRoute.bind(this)
   }
   componentWillMount() {
     esriLoader.bootstrap((err) => {
@@ -64,19 +67,23 @@ class App extends Component {
         );
 
         const routeQuery = new Query();
-        routeQuery.where = '1 = 1'
+        routeQuery.where = 'trailtype = 19178'
         routeQuery.outFields = ['*'];
         this.routesFeatureLayer.queryFeatures(
           routeQuery,
           (featureSet) => {
-            debugger
             const results = featureSet.features
+            //   .filter(feature => feature.attributes.notes && feature.attributes.notes.includes('--sig2017g2'))
+            //   .map((feature) => {
+            //     feature.attributes.notes = feature.attributes.notes.slice(0, -11)
+            //     return feature
+            //   })
+            // debugger
             this.setState({
               serverRoutes: results
             })
           },
           (error) => {
-            debugger
             console.error(error)
           }
         );
@@ -159,17 +166,14 @@ class App extends Component {
           routeKm: route.attributes.Total_Kilometers,
           routeName: route.attributes.Name
         })
-        this.refs.map.addRoute(route)
-        debugger
         this.routesFeatureLayer.applyEdits(
           [route], null, null,
           (result) => {
-            debugger
-            console.log(result)
+            // console.log(result)
+            this.refs.map.addRoute(route)
           },
           (error) => {
-            debugger
-            console.error(error)
+            // console.error(error)
           }
         );
       },
@@ -217,6 +221,35 @@ class App extends Component {
     );
   }
 
+  deleteOldRoutes() {
+    this.routesFeatureLayer.applyEdits(
+      null, null, this.state.serverRoutes,
+      (result) => {
+        this.setState({
+          serverRoutes: []
+        })
+        console.log(result)
+      },
+      (error) => {
+        console.error(error)
+      }
+    );
+  }
+
+  onSelectPreviousRoute(route) {
+    // debugger
+    // this.setState({
+    //   routeKm: route.attributes.Total_Kilometers,
+    //   routeName: route.attributes.Name
+    // })
+    const wkid = route.geometry.spatialReference.wkid
+    const start = route.geometry.paths[0][0]
+    const end = route.geometry.paths[0][route.geometry.paths.length - 1]
+    this.refs.map.addMarkerFromCoordinates(start, wkid)
+    this.refs.map.addMarkerFromCoordinates(end, wkid)
+    this.refs.map.addRoute(route)
+  }
+
   render() {
     return (
     <div className="app">
@@ -228,23 +261,21 @@ class App extends Component {
           onSelectLocation={this.onSelectLocation}
           placeholder='Ingrese una ubicación'
         />
+
         <div className="old-destinations-container">
           {this.state.serverFeatures.length > 0 && (
             <div>
               <span>Destinos anteriores     </span>
-              <button
-                className="btn btn-danger"
-                onClick={this.deleteOldDestinations}>
-                Eliminar
-              </button>
+              <i className="fa fa-trash pointer" aria-hidden="true" onClick={this.deleteOldDestinations}></i>
             </div>
           )}
         </div>
-        <ul className="old-destinations">
+
+        <ul className="list-group old-destinations">
           {
             this.state.serverFeatures.map((f, index) => (
-              <li key={index} >
-                <div>
+              <li className="list-group-item" key={index} >
+                <div className='list-item-container'>
                   <span>{f.attributes.description}</span>
                   <i className="fa fa-plus pointer add-location" aria-hidden="true" onClick={() => this.onSelectPreviousLocation(f)}></i>
                 </div>
@@ -252,10 +283,34 @@ class App extends Component {
             ))
           }
         </ul>
+
+
+        <div className="old-destinations-container">
+          {this.state.serverRoutes.length > 0 && (
+            <div>
+              <span>Rutas anteriores     </span>
+                <i className="fa fa-trash pointer" aria-hidden="true" onClick={this.deleteOldRoutes}></i>
+            </div>
+          )}
+        </div>
+        <ul className="old-destinations list-group">
+          {
+            this.state.serverRoutes.map((f, index) => (
+              <li className="list-group-item" key={index} >
+                <div className='list-item-container'>
+                  <span>{f.attributes.notes}</span>
+                  <i className="fa fa-plus pointer add-location" aria-hidden="true" onClick={() => this.onSelectPreviousRoute(f)}></i>
+                </div>
+              </li>
+            ))
+          }
+      </ul>
+
+
         <div className="destinations">{this.state.stops.length > 0 && <span>Destinos seleccionados:</span>}</div>
-        <ul>
+        <ul className="list-group">
           {this.state.destinations.map((dest, index) => (
-            <li key={index}>
+            <li className="list-group-item" key={index}>
               {dest}
             </li>
           ))}

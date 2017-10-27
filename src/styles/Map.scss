@@ -3,8 +3,11 @@
   height: 100%;
 }
 .childs-container {
-  padding-top: 25px;
+  padding-top: 8px;
   margin-right: 26px;
+  font-size: 13px;
+  max-height: 89vh;
+  overflow-y: auto;
 }
 
 

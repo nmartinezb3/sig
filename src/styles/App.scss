@@ -37,12 +37,17 @@
   cursor: not-allowed;
 }
 
+.list-item-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 .speed {
   margin-left: 17px;
 }
 
 .destinations {
-  margin-top: 12px;
+  margin-top: 25px;
 }
 .old-destinations-container {
   margin-top: 25px;
@@ -50,6 +55,9 @@
 
 .old-destinations {
   margin-top: 12px;
-  max-height: 140px;
+}
+
+.list-group {
+  max-height: 133px;
   overflow: auto;
 }
