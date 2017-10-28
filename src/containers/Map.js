@@ -11,19 +11,28 @@ class Map extends Component {
     this.state = {
       time: 1000,
     };
-    this.stops = []
-    
-    this.addCar = this.addCar.bind(this)
-    this.updateCarPosition = this.updateCarPosition.bind(this)
-    this.addRoute = this.addRoute.bind(this)
+    this.stops = [];
+    this.addCar = this.addCar.bind(this);
+    this.updateCarPosition = this.updateCarPosition.bind(this);
+    this.addRoute = this.addRoute.bind(this);
     this.showBuffer = this.showBuffer.bind(this);
     this.doBuffer = this.doBuffer.bind(this);
+    this.createGS = this.createGS.bind(this);
+    this.removeCar = this.removeCar.bind(this);
   }
 
   componentDidMount() {
     this.createMap();
+    this.createGS();
   }
 
+  createGS(){
+    esriLoader.dojoRequire([
+      'esri/tasks/GeometryService',
+    ],(GeometryService)=>{
+      this.gsvc = new GeometryService('https://utility.arcgisonline.com/ArcGIS/rest/services/Geometry/GeometryServer');
+    });
+  }
 
   createMap() {
     esriLoader.dojoRequire([
@@ -175,7 +184,7 @@ class Map extends Component {
       'esri/Color',
       'esri/graphic',
     ], (SimpleFillSymbol, SimpleLineSymbol, Color, Graphic)=>{
-      console.log("entro a la funcion");
+      
       var symbol = new SimpleFillSymbol(
         SimpleFillSymbol.STYLE_SOLID,
         new SimpleLineSymbol(
@@ -184,12 +193,14 @@ class Map extends Component {
         ),
         new Color([0,0,255,0.35])
       );
-      console.log("se llego al for sin error");
-      for (var geoPos in bufferedGeometries){
-        var geometry = bufferedGeometries[geoPos];
-        var graph = new Graphic(geometry, symbol);
-        this.map.graphics.add(graph);
-      }
+
+      //borro buffer anterior
+      this.map.graphics.remove(this.buffer);
+
+      var bufferGeometry = bufferedGeometries[0];
+      this.buffer = new Graphic(bufferGeometry, symbol);
+      this.map.graphics.add(this.buffer);
+      
     })
   }
 
@@ -204,8 +215,6 @@ class Map extends Component {
       params.outSpatialReference = this.map.spatialReference;
       params.unit = GeometryService.UNIT_KILOMETER;
 
-      this.gsvc = new GeometryService('https://utility.arcgisonline.com/ArcGIS/rest/services/Geometry/GeometryServer');
-      
       this.gsvc.buffer(params, this.showBuffer);
 
     })
@@ -224,6 +233,8 @@ class Map extends Component {
       const p = new Point(coordinates[0], coordinates[1], this.map.spatialReference)
       console.log('updating car', p)
       this.car.setGeometry(p)
+      
+      this.doBuffer(p);
       // this.car.show()
     })
   }
