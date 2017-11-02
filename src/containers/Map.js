@@ -12,6 +12,7 @@ class Map extends Component {
       time: 1000,
     };
     this.stops = [];
+    this.condadosAbarcados = [];
     this.addCar = this.addCar.bind(this);
     this.updateCarPosition = this.updateCarPosition.bind(this);
     this.addRoute = this.addRoute.bind(this);
@@ -19,6 +20,7 @@ class Map extends Component {
     this.doBuffer = this.doBuffer.bind(this);
     this.createGS = this.createGS.bind(this);
     this.removeCar = this.removeCar.bind(this);
+    this.mostrarInfoCondados = this.mostrarInfoCondados.bind(this);
   }
 
   componentDidMount() {
@@ -38,11 +40,13 @@ class Map extends Component {
     esriLoader.dojoRequire([
       'esri/map',
       'esri/layers/FeatureLayer',
-      'esri/layers/ArcGISTiledMapServiceLayer'
+      'esri/layers/ArcGISTiledMapServiceLayer',
+      'esri/InfoTemplate',
     ],(
       Map,
       FeatureLayer,
       ArcGISTiledMapServiceLayer,
+      InfoTemplate
     )=>{
       this.map = new Map('map-container', {
         basemap: "topo",
@@ -50,15 +54,24 @@ class Map extends Component {
         zoom: 5
       });
 
+
       var basemap = new ArcGISTiledMapServiceLayer("http://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer");
-
-      var layerPoblacion = new FeatureLayer('https://services.arcgisonline.com/arcgis/rest/services/Demographics/USA_1990-2000_Population_Change/MapServer/3', {
-        opacity: 0.5,
+      
+      var info = new InfoTemplate("Nombre: ${NAME}", "Población Total: ${TOTPOP_CY}");
+      this.layerPoblacion = new FeatureLayer('https://services.arcgisonline.com/arcgis/rest/services/Demographics/USA_1990-2000_Population_Change/MapServer/3',{
+        outFields:["ID", "NAME", "TOTPOP_CY"],
+        infoTemplate: info
       });
-      // var layerPoblacion = new FeatureLayer('https://services.arcgis.com/V6ZHFr6zdgNZuVG0/arcgis/rest/services/Landscape_Trees/FeatureServer/0');
-      //this.map.addLayers([basemap, layerPoblacion]);
 
-      //this.map.on("click", this.doBuffer);
+      // this.map.addLayers(layerPoblacion);
+
+      // layerPoblacion.graphics.forEach(g =>
+      //   console.log(g.InfoTemplate.title));
+        // console.log(g.InfoTemplate.content);
+        // console.log('-----------------------------------------------');
+      // });
+      // var layerPoblacion = new FeatureLayer('https://services.arcgis.com/V6ZHFr6zdgNZuVG0/arcgis/rest/services/Landscape_Trees/FeatureServer/0');
+      // this.map.addLayers([basemap, this.layerPoblacion]);
 
       this.setState({
         loaded: true
@@ -183,7 +196,8 @@ class Map extends Component {
       'esri/symbols/SimpleLineSymbol',
       'esri/Color',
       'esri/graphic',
-    ], (SimpleFillSymbol, SimpleLineSymbol, Color, Graphic)=>{
+      'esri/tasks/query',
+    ], (SimpleFillSymbol, SimpleLineSymbol, Color, Graphic, Query)=>{
       
       var symbol = new SimpleFillSymbol(
         SimpleFillSymbol.STYLE_SOLID,
@@ -196,12 +210,45 @@ class Map extends Component {
 
       //borro buffer anterior
       this.map.graphics.remove(this.buffer);
-
       var bufferGeometry = bufferedGeometries[0];
       this.buffer = new Graphic(bufferGeometry, symbol);
       this.map.graphics.add(this.buffer);
+
+      var query = new Query();
+      query.geometry = bufferGeometry;
+      this.layerPoblacion.queryFeatures(query, this.mostrarInfoCondados);
       
     })
+  }
+
+  mostrarInfoCondados(response){
+    esriLoader.dojoRequire([
+      'esri/symbols/SimpleFillSymbol',
+      'esri/symbols/SimpleLineSymbol',
+      'esri/Color',
+      'esri/graphic',
+    ], (SimpleFillSymbol, SimpleLineSymbol, Color, Graphic)=>{
+      var features = response.features;
+
+      // Limpio condados mostrados anteriormente
+      this.condadosAbarcados.forEach(condado => this.map.graphics.remove(condado));
+
+      var rellenoCondados = new SimpleFillSymbol(
+        SimpleFillSymbol.STYLE_SOLID,
+        new SimpleLineSymbol(
+          SimpleLineSymbol.STYLE_SOLID,
+          new Color([70,255,150,0.65]), 2
+        ),
+        new Color([70,255,150,0.35])
+      );
+
+      // Esto muestra los condados que va abarcando el buffer
+      features.forEach(feature => {
+        var condado = new Graphic(feature.geometry, rellenoCondados);
+        this.condadosAbarcados.push(condado);
+        this.map.graphics.add(condado);
+      })
+    });
   }
 
   doBuffer(point){
