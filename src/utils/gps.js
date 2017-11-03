@@ -18,7 +18,8 @@ class GPS {
   }
 
   getInterval() {
-    return (this.distance / this.speed) * 3600000
+    return this.speed
+    // return (this.distance / this.speed) * 3600000
   }
 
   getNewCoordinate() {
@@ -88,6 +89,18 @@ class GPS {
       routeTask.solve(routeParams)
     });
   }
+
+  startNavigationWithOldRoute(route, speed, coordinateCallback, onFinishNavigationCallback) {
+    this.coordinates = route.geometry.paths[0]
+    this.distance = route.attributes.Total_Kilometers
+    this.speed = speed
+    this.callback = coordinateCallback
+    this.onFinishNavigationCallback = onFinishNavigationCallback
+
+    // start simulating gps
+    this.start()
+  }
 }
+
 
 export default GPS

@@ -4,7 +4,6 @@ import * as esriLoader from 'esri-loader';
 import '../styles/Map.css'
 
 class Map extends Component {
-  
   constructor(props) {
     super(props);
 
@@ -28,10 +27,10 @@ class Map extends Component {
     this.createGS();
   }
 
-  createGS(){
+  createGS() {
     esriLoader.dojoRequire([
       'esri/tasks/GeometryService',
-    ],(GeometryService)=>{
+    ], (GeometryService) => {
       this.gsvc = new GeometryService('https://utility.arcgisonline.com/ArcGIS/rest/services/Geometry/GeometryServer');
     });
   }
@@ -42,24 +41,24 @@ class Map extends Component {
       'esri/layers/FeatureLayer',
       'esri/layers/ArcGISTiledMapServiceLayer',
       'esri/InfoTemplate',
-    ],(
+    ], (
       Map,
       FeatureLayer,
       ArcGISTiledMapServiceLayer,
       InfoTemplate
-    )=>{
+    ) => {
       this.map = new Map('map-container', {
-        basemap: "topo",
+        basemap: 'topo',
         center: [-97.00, 39.90],
         zoom: 5
       });
 
 
-      var basemap = new ArcGISTiledMapServiceLayer("http://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer");
-      
-      var info = new InfoTemplate("Nombre: ${NAME}", "Población Total: ${TOTPOP_CY}");
-      this.layerPoblacion = new FeatureLayer('https://services.arcgisonline.com/arcgis/rest/services/Demographics/USA_1990-2000_Population_Change/MapServer/3',{
-        outFields:["ID", "NAME", "TOTPOP_CY"],
+      const basemap = new ArcGISTiledMapServiceLayer('http://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer');
+
+      const info = new InfoTemplate('Nombre: ${NAME}', 'Población Total: ${TOTPOP_CY}');
+      this.layerPoblacion = new FeatureLayer('https://services.arcgisonline.com/arcgis/rest/services/Demographics/USA_1990-2000_Population_Change/MapServer/3', {
+        outFields: ['ID', 'NAME', 'TOTPOP_CY'],
         infoTemplate: info
       });
 
@@ -67,8 +66,8 @@ class Map extends Component {
 
       // layerPoblacion.graphics.forEach(g =>
       //   console.log(g.InfoTemplate.title));
-        // console.log(g.InfoTemplate.content);
-        // console.log('-----------------------------------------------');
+      // console.log(g.InfoTemplate.content);
+      // console.log('-----------------------------------------------');
       // });
       // var layerPoblacion = new FeatureLayer('https://services.arcgis.com/V6ZHFr6zdgNZuVG0/arcgis/rest/services/Landscape_Trees/FeatureServer/0');
       // this.map.addLayers([basemap, this.layerPoblacion]);
@@ -81,6 +80,7 @@ class Map extends Component {
 
   clearGraphicLayer() {
     this.map.graphics.clear();
+    this.map.graphics.refresh()
   }
 
   addRoute(route) {
@@ -149,7 +149,7 @@ class Map extends Component {
     })
   }
 
-  addMarkerFromCoordinates(coordinates, wkid) {
+  addMarkerFromCoordinates(coordinates, sr) {
     esriLoader.dojoRequire([
       'esri/symbols/SimpleMarkerSymbol',
       'dojo/_base/Color',
@@ -162,7 +162,7 @@ class Map extends Component {
         .setColor(new Color([255, 0, 0, 0.5]))
         .setSize(15);
       symbol.outline.setWidth(4);
-      const point = new Point(coordinates, new SpatialReference({ wkid }));
+      const point = new Point(coordinates)
       const graphic = new Graphic(point, symbol);
       const stop = this.map.graphics.add(graphic);
       this.stops.push(stop)
@@ -174,98 +174,94 @@ class Map extends Component {
   }
 
   addCar(coordinates) {
+    const this2 = this
     esriLoader.dojoRequire([
       'esri/geometry/Point', 'esri/symbols/SimpleMarkerSymbol',
       'esri/Color', 'esri/InfoTemplate', 'esri/graphic',
     ], (Point, SimpleMarkerSymbol, Color, InfoTemplate, Graphic) => {
-      const pt = new Point(coordinates[0], coordinates[1], this.map.spatialReference)
+      const pt = new Point(coordinates[0], coordinates[1], this2.map.spatialReference)// , this2.map.spatialReference
       const sms = new SimpleMarkerSymbol().setStyle(SimpleMarkerSymbol.STYLE_CIRCLE).setColor(new Color([255, 0, 0, 0.5]));
       const attr = {Xcoord: coordinates[0], Ycoord: coordinates[1], Plant: 'Mesa Mint'};
 
-      this.doBuffer(pt);
+      this2.doBuffer(pt);
 
-      this.car = new Graphic(pt, sms, attr);
-
-      this.map.graphics.add(this.car);
+      this2.car = new Graphic(pt, sms, attr);
+      this2.map.graphics.add(this2.car);
     })
   }
 
-  showBuffer(bufferedGeometries){
+  showBuffer(bufferedGeometries) {
     esriLoader.dojoRequire([
       'esri/symbols/SimpleFillSymbol',
       'esri/symbols/SimpleLineSymbol',
       'esri/Color',
       'esri/graphic',
       'esri/tasks/query',
-    ], (SimpleFillSymbol, SimpleLineSymbol, Color, Graphic, Query)=>{
-      
-      var symbol = new SimpleFillSymbol(
+    ], (SimpleFillSymbol, SimpleLineSymbol, Color, Graphic, Query) => {
+      const symbol = new SimpleFillSymbol(
         SimpleFillSymbol.STYLE_SOLID,
         new SimpleLineSymbol(
           SimpleLineSymbol.STYLE_SOLID,
-          new Color([0,0,255,0.65]), 2
+          new Color([0, 0, 255, 0.65]), 2
         ),
-        new Color([0,0,255,0.35])
+        new Color([0, 0, 255, 0.35])
       );
 
-      //borro buffer anterior
+      // borro buffer anterior
       this.map.graphics.remove(this.buffer);
-      var bufferGeometry = bufferedGeometries[0];
+      const bufferGeometry = bufferedGeometries[0];
       this.buffer = new Graphic(bufferGeometry, symbol);
       this.map.graphics.add(this.buffer);
 
-      var query = new Query();
+      const query = new Query();
       query.geometry = bufferGeometry;
       this.layerPoblacion.queryFeatures(query, this.mostrarInfoCondados);
-      
     })
   }
 
-  mostrarInfoCondados(response){
+  mostrarInfoCondados(response) {
     esriLoader.dojoRequire([
       'esri/symbols/SimpleFillSymbol',
       'esri/symbols/SimpleLineSymbol',
       'esri/Color',
       'esri/graphic',
-    ], (SimpleFillSymbol, SimpleLineSymbol, Color, Graphic)=>{
-      var features = response.features;
+    ], (SimpleFillSymbol, SimpleLineSymbol, Color, Graphic) => {
+      const features = response.features;
 
       // Limpio condados mostrados anteriormente
       this.condadosAbarcados.forEach(condado => this.map.graphics.remove(condado));
 
-      var rellenoCondados = new SimpleFillSymbol(
+      const rellenoCondados = new SimpleFillSymbol(
         SimpleFillSymbol.STYLE_SOLID,
         new SimpleLineSymbol(
           SimpleLineSymbol.STYLE_SOLID,
-          new Color([70,255,150,0.65]), 2
+          new Color([70, 255, 150, 0.65]), 2
         ),
-        new Color([70,255,150,0.35])
+        new Color([70, 255, 150, 0.35])
       );
 
       // Esto muestra los condados que va abarcando el buffer
-      features.forEach(feature => {
-        var condado = new Graphic(feature.geometry, rellenoCondados);
+      features.forEach((feature) => {
+        const condado = new Graphic(feature.geometry, rellenoCondados);
         this.condadosAbarcados.push(condado);
         this.map.graphics.add(condado);
       })
     });
   }
 
-  doBuffer(point){
+  doBuffer(point) {
     esriLoader.dojoRequire([
       'esri/tasks/BufferParameters',
       'esri/tasks/GeometryService',
-    ], (BufferParameters, GeometryService) =>{
-      var params = new BufferParameters();
-      params.geometries = [ point ]; 
-      params.distances = [ 10 ];
+    ], (BufferParameters, GeometryService) => {
+      const params = new BufferParameters();
+      params.geometries = [point];
+      params.distances = [10];
       params.outSpatialReference = this.map.spatialReference;
       params.unit = GeometryService.UNIT_KILOMETER;
 
       this.gsvc.buffer(params, this.showBuffer);
-
     })
-   
   }
 
 
@@ -273,14 +269,19 @@ class Map extends Component {
     this.map.graphics.remove(this.car)
   }
 
-  updateCarPosition(coordinates) {
+  updateCarPosition(coordinates, shouldSetSpatialReference) {
     esriLoader.dojoRequire([
       'esri/geometry/Point',
     ], (Point) => {
-      const p = new Point(coordinates[0], coordinates[1], this.map.spatialReference)
+      let p;
+      if (shouldSetSpatialReference) {
+        p = new Point(coordinates[0], coordinates[1])
+      } else {
+        p = new Point(coordinates[0], coordinates[1], this.map.spatialReference)
+      }
       console.log('updating car', p)
       this.car.setGeometry(p)
-      
+
       this.doBuffer(p);
       // this.car.show()
     })

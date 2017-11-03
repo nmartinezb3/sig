@@ -11,7 +11,7 @@ class App extends Component {
     super(props)
     this.state = {
       firstPoint: true,
-      speed: 100000,
+      speed: 1000,
       stops: [],
       destinations: [],
       serverFeatures: [],
@@ -145,45 +145,71 @@ class App extends Component {
 
   startNavigation() {
     this.refs.map.hidePopup()
-
-    this.gps.startNavigation(
-      this.state.stops, this.state.speed,
-      (coordinate, isFirst) => {
-        // on new coordinate
-        if (isFirst) {
-          this.refs.map.addCar(coordinate)
-          this.setState({
-            navigationActive: true
-          })
-        } else {
-          this.refs.map.updateCarPosition(coordinate)
-        }
-        console.log(coordinate)
-      },
-      (route) => {
-        // on route loaded
-        this.setState({
-          routeKm: route.attributes.Total_Kilometers,
-          routeName: route.attributes.Name
-        })
-        this.routesFeatureLayer.applyEdits(
-          [route], null, null,
-          (result) => {
-            // console.log(result)
-            this.refs.map.addRoute(route)
-          },
-          (error) => {
-            // console.error(error)
+    if (!this.hasSelectedAPreviousRoute) {
+      // has selected origin and destination, must calculate route
+      this.gps.startNavigation(
+        this.state.stops, this.state.speed,
+        (coordinate, isFirst) => {
+          // on new coordinate
+          if (isFirst) {
+            this.refs.map.addCar(coordinate)
+            this.setState({
+              navigationActive: true
+            })
+          } else {
+            this.refs.map.updateCarPosition(coordinate)
           }
-        );
-      },
-      () => {
-        // on finish navigation
-        this.setState({
-          navigationActive: false
-        })
-      }
-    )
+          console.log(coordinate)
+        },
+        (route) => {
+          // on route loaded
+          this.setState({
+            routeKm: route.attributes.Total_Kilometers,
+            routeName: route.attributes.Name
+          })
+          this.routesFeatureLayer.applyEdits(
+            [route], null, null,
+            (result) => {
+              // console.log(result)
+              this.refs.map.addRoute(route)
+            },
+            (error) => {
+              // console.error(error)
+            }
+          );
+        },
+        () => {
+          // on finish navigation
+          this.setState({
+            navigationActive: false
+          })
+        }
+      )
+    } else {
+      this.gps.startNavigationWithOldRoute(
+        this.state.selectedRoute, this.state.speed,
+        (coordinate, isFirst) => {
+          // on new coordinate
+          if (isFirst) {
+            this.refs.map.addCar(coordinate)
+            this.setState({
+              navigationActive: true
+            })
+          } else {
+            this.refs.map.updateCarPosition(coordinate, true)
+          }
+          console.log(coordinate)
+        },
+        () => {
+          // on finish navigation
+          this.setState({
+            navigationActive: false,
+            selectedRoute: undefined
+          })
+          this.hasSelectedAPreviousRoute = false
+        }
+      )
+    }
   }
 
   onChangeSpeed(e) {
@@ -242,12 +268,17 @@ class App extends Component {
     //   routeKm: route.attributes.Total_Kilometers,
     //   routeName: route.attributes.Name
     // })
-    const wkid = route.geometry.spatialReference.wkid
+    const sr = route.geometry.spatialReference
     const start = route.geometry.paths[0][0]
-    const end = route.geometry.paths[0][route.geometry.paths.length - 1]
-    this.refs.map.addMarkerFromCoordinates(start, wkid)
-    this.refs.map.addMarkerFromCoordinates(end, wkid)
+    const end = route.geometry.paths[0][route.geometry.paths[0].length - 1]
+    this.refs.map.addMarkerFromCoordinates(end, sr)
+    this.refs.map.addMarkerFromCoordinates(start, sr)
     this.refs.map.addRoute(route)
+    this.setState({
+      stops: [start, end],
+      selectedRoute: route
+    })
+    this.hasSelectedAPreviousRoute = true
   }
 
   render() {
@@ -325,8 +356,8 @@ class App extends Component {
           <input
             type="range"
             name="points"
-            min="0"
-            max="100000000"
+            min="1"
+            max="1000"
             value={this.state.speed}
             onChange={this.onChangeSpeed}
           />
