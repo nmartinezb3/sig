@@ -20,6 +20,9 @@ class Map extends Component {
     this.createGS = this.createGS.bind(this);
     this.removeCar = this.removeCar.bind(this);
     this.mostrarInfoCondados = this.mostrarInfoCondados.bind(this);
+    this.calcularInterseccion = this.calcularInterseccion.bind(this);
+    this.calcularPoblacion = this.calcularPoblacion.bind(this);
+    this.simplificarGeometrias = this.simplificarGeometrias.bind(this);
   }
 
   componentDidMount() {
@@ -61,16 +64,6 @@ class Map extends Component {
         outFields: ['ID', 'NAME', 'TOTPOP_CY'],
         infoTemplate: info
       });
-
-      // this.map.addLayers(layerPoblacion);
-
-      // layerPoblacion.graphics.forEach(g =>
-      //   console.log(g.InfoTemplate.title));
-      // console.log(g.InfoTemplate.content);
-      // console.log('-----------------------------------------------');
-      // });
-      // var layerPoblacion = new FeatureLayer('https://services.arcgis.com/V6ZHFr6zdgNZuVG0/arcgis/rest/services/Landscape_Trees/FeatureServer/0');
-      // this.map.addLayers([basemap, this.layerPoblacion]);
 
       this.setState({
         loaded: true
@@ -209,12 +202,12 @@ class Map extends Component {
 
       // borro buffer anterior
       this.map.graphics.remove(this.buffer);
-      const bufferGeometry = bufferedGeometries[0];
-      this.buffer = new Graphic(bufferGeometry, symbol);
+      this.bufferGeometry = bufferedGeometries[0];
+      this.buffer = new Graphic(this.bufferGeometry, symbol);
       this.map.graphics.add(this.buffer);
 
       const query = new Query();
-      query.geometry = bufferGeometry;
+      query.geometry = this.bufferGeometry;
       this.layerPoblacion.queryFeatures(query, this.mostrarInfoCondados);
     })
   }
@@ -240,13 +233,52 @@ class Map extends Component {
         new Color([70, 255, 150, 0.35])
       );
 
-      // Esto muestra los condados que va abarcando el buffer
+      this.geometriaCondados = []; 
+
+      // Esto muestra los condados que va abarcando el buffer, el nombre y 
+      // la poblacion de cada uno
       features.forEach((feature) => {
+        console.log("Nombre: " + feature.attributes["NAME"]);
+        console.log("Poblacion total: " + feature.attributes["TOTPOP_CY"]);
+        console.log("--------------------------------------------");
         const condado = new Graphic(feature.geometry, rellenoCondados);
         this.condadosAbarcados.push(condado);
+        this.geometriaCondados.push(feature.geometry);
         this.map.graphics.add(condado);
       })
+
+      console.log("*****************************************");
+      console.log("*****************************************");
+
+      // Calculo la intersección de cada condado con el buffer
+      this.gsvc.intersect(this.geometriaCondados, this.bufferGeometry, this.calcularInterseccion);
+
     });
+  }
+
+  // Calcula el area de la interseccion de cada condado con el buffer
+  calcularInterseccion(geometries){
+    esriLoader.dojoRequire([
+      'esri/tasks/BufferParameters',
+      'esri/tasks/GeometryService',
+      'esri/tasks/AreasAndLengthsParameters',
+    ], (BufferParameters, GeometryService, AreasAndLengthsParameters) => {
+      this.areasAndLengthParams = new AreasAndLengthsParameters();
+      this.areasAndLengthParams.lengthUnit = GeometryService.UNIT_KILOMETER;
+      this.areasAndLengthParams.areaUnit = GeometryService.UNIT_KILOMETER;
+      this.areasAndLengthParams.calculationType = "geodesic";
+      this.gsvc.simplify(geometries, this.simplificarGeometrias);
+    });
+  }
+
+  simplificarGeometrias(simplifiedGeometries){
+    this.areasAndLengthParams.polygons = simplifiedGeometries;
+    this.gsvc.areasAndLengths(this.areasAndLengthParams, this.calcularPoblacion);
+  }
+
+  calcularPoblacion(evtObj){
+    var result = evtObj.result; 
+    console.log(result);
   }
 
   doBuffer(point) {
