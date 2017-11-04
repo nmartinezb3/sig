@@ -7,6 +7,8 @@ class Map extends Component {
   constructor(props) {
     super(props);
 
+    this.RADIO_BUFFER = 10;
+
     this.state = {
       time: 1000,
     };
@@ -21,8 +23,7 @@ class Map extends Component {
     this.removeCar = this.removeCar.bind(this);
     this.mostrarInfoCondados = this.mostrarInfoCondados.bind(this);
     this.calcularInterseccion = this.calcularInterseccion.bind(this);
-    this.calcularPoblacion = this.calcularPoblacion.bind(this);
-    this.simplificarGeometrias = this.simplificarGeometrias.bind(this);
+    this.calcularAreas = this.calcularAreas.bind(this);
   }
 
   componentDidMount() {
@@ -61,7 +62,7 @@ class Map extends Component {
 
       const info = new InfoTemplate('Nombre: ${NAME}', 'Población Total: ${TOTPOP_CY}');
       this.layerPoblacion = new FeatureLayer('https://services.arcgisonline.com/arcgis/rest/services/Demographics/USA_1990-2000_Population_Change/MapServer/3', {
-        outFields: ['ID', 'NAME', 'TOTPOP_CY'],
+        outFields: ['ID', 'NAME', 'TOTPOP_CY', 'LANDAREA'],
         infoTemplate: info
       });
 
@@ -219,10 +220,10 @@ class Map extends Component {
       'esri/Color',
       'esri/graphic',
     ], (SimpleFillSymbol, SimpleLineSymbol, Color, Graphic) => {
-      const features = response.features;
+      var features = response.features;
 
       // Limpio condados mostrados anteriormente
-      this.condadosAbarcados.forEach(condado => this.map.graphics.remove(condado));
+      this.condadosAbarcados.forEach(condado => this.map.graphics.remove(condado.geometry));
 
       const rellenoCondados = new SimpleFillSymbol(
         SimpleFillSymbol.STYLE_SOLID,
@@ -236,49 +237,58 @@ class Map extends Component {
       this.geometriaCondados = []; 
 
       // Esto muestra los condados que va abarcando el buffer, el nombre y 
-      // la poblacion de cada uno
+      // la poblacion total de cada uno
       features.forEach((feature) => {
         console.log("Nombre: " + feature.attributes["NAME"]);
         console.log("Poblacion total: " + feature.attributes["TOTPOP_CY"]);
         console.log("--------------------------------------------");
         const condado = new Graphic(feature.geometry, rellenoCondados);
-        this.condadosAbarcados.push(condado);
+        this.condadosAbarcados.push(feature);
         this.geometriaCondados.push(feature.geometry);
         this.map.graphics.add(condado);
-      })
+      });
 
       console.log("*****************************************");
       console.log("*****************************************");
 
-      // Calculo la intersección de cada condado con el buffer
+      //Calculo la intersección de cada condado con el buffer
       this.gsvc.intersect(this.geometriaCondados, this.bufferGeometry, this.calcularInterseccion);
 
     });
   }
 
   // Calcula el area de la interseccion de cada condado con el buffer
-  calcularInterseccion(geometries){
+  calcularInterseccion(geometries){    
     esriLoader.dojoRequire([
       'esri/tasks/BufferParameters',
       'esri/tasks/GeometryService',
       'esri/tasks/AreasAndLengthsParameters',
     ], (BufferParameters, GeometryService, AreasAndLengthsParameters) => {
+
       this.areasAndLengthParams = new AreasAndLengthsParameters();
       this.areasAndLengthParams.lengthUnit = GeometryService.UNIT_KILOMETER;
-      this.areasAndLengthParams.areaUnit = GeometryService.UNIT_KILOMETER;
+      this.areasAndLengthParams.areaUnit = GeometryService.UNIT_SQUARE_KILOMETERS;
       this.areasAndLengthParams.calculationType = "geodesic";
-      this.gsvc.simplify(geometries, this.simplificarGeometrias);
+      this.areasAndLengthParams.polygons = geometries;
+      this.gsvc.areasAndLengths(this.areasAndLengthParams, this.calcularAreas);
+
     });
   }
 
-  simplificarGeometrias(simplifiedGeometries){
-    this.areasAndLengthParams.polygons = simplifiedGeometries;
-    this.gsvc.areasAndLengths(this.areasAndLengthParams, this.calcularPoblacion);
-  }
 
-  calcularPoblacion(evtObj){
-    var result = evtObj.result; 
-    console.log(result);
+  calcularAreas(interseccionBuffer){
+    var areasIntersectadas = interseccionBuffer.areas;
+    var i = 0;
+    this.condadosAbarcados.forEach(condado => {
+      var nombreCondado = condado.attributes["NAME"];
+      var areaTotalCondado = condado.attributes["LANDAREA"] * 2.59; //Esto es para convertir de millas cuadradas a km2
+      var poblacionTotalCondado = condado.attributes["TOTPOP_CY"];
+      var areaIntersectadaCondado = areasIntersectadas[i];
+      var poblacionIntersectadaCondado = (areaIntersectadaCondado * poblacionTotalCondado) / areaTotalCondado;
+
+      console.log(nombreCondado + "- Población Total: " + poblacionTotalCondado + " - Población Intersectada: " + poblacionIntersectadaCondado);
+      i = i + 1;
+    })
   }
 
   doBuffer(point) {
@@ -288,7 +298,7 @@ class Map extends Component {
     ], (BufferParameters, GeometryService) => {
       const params = new BufferParameters();
       params.geometries = [point];
-      params.distances = [10];
+      params.distances = [this.RADIO_BUFFER];
       params.outSpatialReference = this.map.spatialReference;
       params.unit = GeometryService.UNIT_KILOMETER;
 
