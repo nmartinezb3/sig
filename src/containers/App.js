@@ -1,10 +1,15 @@
 import React, { Component } from 'react';
 import * as esriLoader from 'esri-loader';
+import { connect } from 'react-redux';
+import Spinner from 'react-spinkit'
 import className from 'classnames'
 import '../styles/App.css';
 import Map from './Map'
 import GeocodeSearchInput from '../components/GeocodeSearchInput'
 import GPS from '../utils/gps'
+import {
+  loading
+} from '../actions/actions'
 
 class App extends Component {
   constructor(props) {
@@ -28,6 +33,7 @@ class App extends Component {
     this.onSelectPreviousRoute = this.onSelectPreviousRoute.bind(this)
   }
   componentWillMount() {
+    this.props.loading(true)
     esriLoader.bootstrap((err) => {
       if (err) {
         console.error(err);
@@ -35,6 +41,7 @@ class App extends Component {
         console.log('ESRI loaded')
         this.login();
         this.loadFeatureServer()
+        this.props.loading(false)
       }
     }, {
       // use a specific version instead of latest 4.x
@@ -43,6 +50,8 @@ class App extends Component {
   }
 
   loadFeatureServer() {
+    this.props.loading(true)
+
     esriLoader.dojoRequire(
       ['esri/layers/FeatureLayer',
         'esri/tasks/query'],
@@ -82,9 +91,11 @@ class App extends Component {
             this.setState({
               serverRoutes: results
             })
+            this.props.loading(false)
           },
           (error) => {
             console.error(error)
+            this.props.loading(false)
           }
         );
       }
@@ -145,6 +156,7 @@ class App extends Component {
 
   startNavigation() {
     this.refs.map.hidePopup()
+    this.props.loading(true)
     if (!this.hasSelectedAPreviousRoute) {
       // has selected origin and destination, must calculate route
       this.gps.startNavigation(
@@ -172,9 +184,11 @@ class App extends Component {
             (result) => {
               // console.log(result)
               this.refs.map.addRoute(route)
+              this.props.loading(false)
             },
             (error) => {
               // console.error(error)
+              this.props.loading(false)
             }
           );
         },
@@ -192,6 +206,8 @@ class App extends Component {
           // on new coordinate
           if (isFirst) {
             this.refs.map.addCar(coordinate)
+            this.props.loading(false)
+
             this.setState({
               navigationActive: true
             })
@@ -287,7 +303,12 @@ class App extends Component {
       <div className="header">
         SIG
       </div>
-      <Map ref="map">
+      {this.props.isLoading && (
+        <div className="spinner-container">
+          <Spinner name="three-bounce" color="floralWhite"/>
+        </div>
+      )}
+      <Map ref="map" loading={this.props.loading}>
         <GeocodeSearchInput
           onSelectLocation={this.onSelectLocation}
           placeholder='Ingrese una ubicación'
@@ -368,4 +389,8 @@ class App extends Component {
   }
 }
 
-export default App;
+const mapStateToProps = state => ({
+  isLoading: state.main.loading > 0
+});
+
+export default connect(mapStateToProps, {loading})(App);

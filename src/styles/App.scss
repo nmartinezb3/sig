@@ -64,3 +64,15 @@
   max-height: 133px;
   overflow: auto;
 }
+
+.spinner-container {
+  z-index: 9999999;
+  position: absolute;
+  width: 100%;
+  text-align: center;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.51);
+}

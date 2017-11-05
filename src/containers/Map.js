@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 
 import * as esriLoader from 'esri-loader';
+
 import '../styles/Map.css'
 
 class Map extends Component {
@@ -31,14 +32,18 @@ class Map extends Component {
   }
 
   createGS() {
+    this.props.loading(true)
     esriLoader.dojoRequire([
       'esri/tasks/GeometryService',
     ], (GeometryService) => {
+      this.props.loading(false)
+
       this.gsvc = new GeometryService('https://utility.arcgisonline.com/ArcGIS/rest/services/Geometry/GeometryServer');
     });
   }
 
   createMap() {
+    this.props.loading(true)
     esriLoader.dojoRequire([
       'esri/map',
       'esri/layers/FeatureLayer',
@@ -68,6 +73,7 @@ class Map extends Component {
       this.setState({
         loaded: true
       })
+      this.props.loading(false)
     });
   }
 
@@ -79,18 +85,23 @@ class Map extends Component {
   addRoute(route) {
     const extent = route.geometry.getExtent()
     this.map.setExtent(extent)
+    this.props.loading(true)
     esriLoader.dojoRequire(['esri/symbols/SimpleLineSymbol', 'esri/Color'], (SimpleLineSymbol, Color) => {
       const routeSymbol = new SimpleLineSymbol().setColor(new Color([0, 0, 255, 0.5])).setWidth(5);
       this.map.graphics.add(route.setSymbol(routeSymbol));
+      this.props.loading(false)
     })
   }
 
   addRouteAndPoints(route) {
+    this.props.loading(true)
+
     const extent = route.geometry.getExtent()
     this.map.setExtent(extent)
     esriLoader.dojoRequire(['esri/symbols/SimpleLineSymbol', 'esri/Color'], (SimpleLineSymbol, Color) => {
       const routeSymbol = new SimpleLineSymbol().setColor(new Color([0, 0, 255, 0.5])).setWidth(5);
       this.map.graphics.add(route.setSymbol(routeSymbol));
+      this.props.loading(false)
     })
   }
 
@@ -233,31 +244,30 @@ class Map extends Component {
         new Color([70, 255, 150, 0.35])
       );
 
-      this.geometriaCondados = []; 
+      this.geometriaCondados = [];
 
-      // Esto muestra los condados que va abarcando el buffer, el nombre y 
+      // Esto muestra los condados que va abarcando el buffer, el nombre y
       // la poblacion de cada uno
       features.forEach((feature) => {
-        console.log("Nombre: " + feature.attributes["NAME"]);
-        console.log("Poblacion total: " + feature.attributes["TOTPOP_CY"]);
-        console.log("--------------------------------------------");
+        console.log(`Nombre: ${feature.attributes.NAME}`);
+        console.log(`Poblacion total: ${feature.attributes.TOTPOP_CY}`);
+        console.log('--------------------------------------------');
         const condado = new Graphic(feature.geometry, rellenoCondados);
         this.condadosAbarcados.push(condado);
         this.geometriaCondados.push(feature.geometry);
         this.map.graphics.add(condado);
       })
 
-      console.log("*****************************************");
-      console.log("*****************************************");
+      console.log('*****************************************');
+      console.log('*****************************************');
 
       // Calculo la intersección de cada condado con el buffer
       this.gsvc.intersect(this.geometriaCondados, this.bufferGeometry, this.calcularInterseccion);
-
     });
   }
 
   // Calcula el area de la interseccion de cada condado con el buffer
-  calcularInterseccion(geometries){
+  calcularInterseccion(geometries) {
     esriLoader.dojoRequire([
       'esri/tasks/BufferParameters',
       'esri/tasks/GeometryService',
@@ -266,18 +276,18 @@ class Map extends Component {
       this.areasAndLengthParams = new AreasAndLengthsParameters();
       this.areasAndLengthParams.lengthUnit = GeometryService.UNIT_KILOMETER;
       this.areasAndLengthParams.areaUnit = GeometryService.UNIT_KILOMETER;
-      this.areasAndLengthParams.calculationType = "geodesic";
+      this.areasAndLengthParams.calculationType = 'geodesic';
       this.gsvc.simplify(geometries, this.simplificarGeometrias);
     });
   }
 
-  simplificarGeometrias(simplifiedGeometries){
+  simplificarGeometrias(simplifiedGeometries) {
     this.areasAndLengthParams.polygons = simplifiedGeometries;
     this.gsvc.areasAndLengths(this.areasAndLengthParams, this.calcularPoblacion);
   }
 
-  calcularPoblacion(evtObj){
-    var result = evtObj.result; 
+  calcularPoblacion(evtObj) {
+    const result = evtObj.result;
     console.log(result);
   }
 
@@ -374,4 +384,4 @@ class Map extends Component {
   }
 }
 
-export default Map;
+export default Map
