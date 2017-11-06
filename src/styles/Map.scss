@@ -10,7 +10,14 @@
   overflow-y: auto;
 }
 
-
+.print-icon {
+  position: absolute;
+  right: 27px;
+  z-index: 99999;
+  top: 7px;
+  font-size: 28px;
+  cursor: pointer;
+}
 //
 // -webkit-animation-duration: 3s;
 // -webkit-animation-iteration-count: infinite;
