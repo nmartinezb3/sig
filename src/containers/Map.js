@@ -14,6 +14,7 @@ class Map extends Component {
     };
     this.stops = [];
     this.condadosAbarcados = [];
+    this.condadosAbarcadosGraphics = [];
     this.addCar = this.addCar.bind(this);
     this.updateCarPosition = this.updateCarPosition.bind(this);
     this.addRoute = this.addRoute.bind(this);
@@ -56,9 +57,6 @@ class Map extends Component {
         center: [-97.00, 39.90],
         zoom: 5
       });
-
-
-      const basemap = new ArcGISTiledMapServiceLayer('http://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer');
 
       const info = new InfoTemplate('Nombre: ${NAME}', 'Población Total: ${TOTPOP_CY}');
       this.layerPoblacion = new FeatureLayer('https://services.arcgisonline.com/arcgis/rest/services/Demographics/USA_1990-2000_Population_Change/MapServer/3', {
@@ -223,7 +221,7 @@ class Map extends Component {
       var features = response.features;
 
       // Limpio condados mostrados anteriormente
-      this.condadosAbarcados.forEach(condado => this.map.graphics.remove(condado.geometry));
+      this.condadosAbarcadosGraphics.forEach(condado => this.map.graphics.remove(condado));
 
       const rellenoCondados = new SimpleFillSymbol(
         SimpleFillSymbol.STYLE_SOLID,
@@ -235,6 +233,7 @@ class Map extends Component {
       );
 
       this.geometriaCondados = []; 
+      this.condadosAbarcadosGraphics = [];
 
       // Esto muestra los condados que va abarcando el buffer, el nombre y 
       // la poblacion total de cada uno
@@ -244,6 +243,7 @@ class Map extends Component {
         console.log("--------------------------------------------");
         const condado = new Graphic(feature.geometry, rellenoCondados);
         this.condadosAbarcados.push(feature);
+        this.condadosAbarcadosGraphics.push(condado);
         this.geometriaCondados.push(feature.geometry);
         this.map.graphics.add(condado);
       });
