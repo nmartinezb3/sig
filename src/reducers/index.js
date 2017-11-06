@@ -3,12 +3,12 @@ import main from './main';
 import ReduxThunk from 'redux-thunk'
 
 const reducers = combineReducers({
-	main,
+  main,
 })
 
 
-let store = createStore(
-	reducers,
+const store = createStore(
+  reducers,
   applyMiddleware(ReduxThunk)
 );
 

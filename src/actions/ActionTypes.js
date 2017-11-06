@@ -1,1 +1,1 @@
-export const ACTION = 'ACTION'
+export const LOADING = 'LOADING'

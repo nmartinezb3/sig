@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 
 import * as esriLoader from 'esri-loader';
+
 import '../styles/Map.css'
 
 class Map extends Component {
@@ -25,6 +26,7 @@ class Map extends Component {
     this.mostrarInfoCondados = this.mostrarInfoCondados.bind(this);
     this.calcularInterseccion = this.calcularInterseccion.bind(this);
     this.calcularAreas = this.calcularAreas.bind(this);
+    this.printMap = this.printMap.bind(this)
   }
 
   componentDidMount() {
@@ -33,14 +35,18 @@ class Map extends Component {
   }
 
   createGS() {
+    this.props.loading(true)
     esriLoader.dojoRequire([
       'esri/tasks/GeometryService',
     ], (GeometryService) => {
+      this.props.loading(false)
+
       this.gsvc = new GeometryService('https://utility.arcgisonline.com/ArcGIS/rest/services/Geometry/GeometryServer');
     });
   }
 
   createMap() {
+    this.props.loading(true)
     esriLoader.dojoRequire([
       'esri/map',
       'esri/layers/FeatureLayer',
@@ -67,6 +73,7 @@ class Map extends Component {
       this.setState({
         loaded: true
       })
+      this.props.loading(false)
     });
   }
 
@@ -78,18 +85,25 @@ class Map extends Component {
   addRoute(route) {
     const extent = route.geometry.getExtent()
     this.map.setExtent(extent)
+
+    this.props.loading(true)
     esriLoader.dojoRequire(['esri/symbols/SimpleLineSymbol', 'esri/Color'], (SimpleLineSymbol, Color) => {
       const routeSymbol = new SimpleLineSymbol().setColor(new Color([0, 0, 255, 0.5])).setWidth(5);
       this.map.graphics.add(route.setSymbol(routeSymbol));
+      this.map.setZoom(this.map.getZoom() - 1)
+      this.props.loading(false)
     })
   }
 
   addRouteAndPoints(route) {
+    this.props.loading(true)
+
     const extent = route.geometry.getExtent()
     this.map.setExtent(extent)
     esriLoader.dojoRequire(['esri/symbols/SimpleLineSymbol', 'esri/Color'], (SimpleLineSymbol, Color) => {
       const routeSymbol = new SimpleLineSymbol().setColor(new Color([0, 0, 255, 0.5])).setWidth(5);
       this.map.graphics.add(route.setSymbol(routeSymbol));
+      this.props.loading(false)
     })
   }
 
@@ -169,13 +183,18 @@ class Map extends Component {
     const this2 = this
     esriLoader.dojoRequire([
       'esri/geometry/Point', 'esri/symbols/SimpleMarkerSymbol',
-      'esri/Color', 'esri/InfoTemplate', 'esri/graphic',
-    ], (Point, SimpleMarkerSymbol, Color, InfoTemplate, Graphic) => {
+      'esri/Color', 'esri/InfoTemplate', 'esri/graphic', 'esri/tasks/BufferParameters',
+      'esri/tasks/GeometryService',
+    ], (Point, SimpleMarkerSymbol, Color, InfoTemplate, Graphic, BufferParameters, GeometryService) => {
       const pt = new Point(coordinates[0], coordinates[1], this2.map.spatialReference)// , this2.map.spatialReference
-      const sms = new SimpleMarkerSymbol().setStyle(SimpleMarkerSymbol.STYLE_CIRCLE).setColor(new Color([255, 0, 0, 0.5]));
+
+      // update color from speed
+      const percentage = (this2.props.speed / this2.props.maxTimer) * 100
+      const color = this2.getColorForPercentage(percentage)
+      const sms = new SimpleMarkerSymbol().setStyle(SimpleMarkerSymbol.STYLE_CIRCLE).setColor(new Color([...color, 0.5]));
       const attr = {Xcoord: coordinates[0], Ycoord: coordinates[1], Plant: 'Mesa Mint'};
 
-      this2.doBuffer(pt);
+      this2.doBuffer(pt, BufferParameters, GeometryService);
 
       this2.car = new Graphic(pt, sms, attr);
       this2.map.graphics.add(this2.car);
@@ -194,9 +213,9 @@ class Map extends Component {
         SimpleFillSymbol.STYLE_SOLID,
         new SimpleLineSymbol(
           SimpleLineSymbol.STYLE_SOLID,
-          new Color([0, 0, 255, 0.65]), 2
+          new Color([0, 0, 255, 0.65]), 1
         ),
-        new Color([0, 0, 255, 0.35])
+        new Color([0, 0, 255, 0])
       );
 
       // borro buffer anterior
@@ -233,14 +252,15 @@ class Map extends Component {
       );
 
       this.geometriaCondados = []; 
+      this.condadosAbarcados = [];
       this.condadosAbarcadosGraphics = [];
 
       // Esto muestra los condados que va abarcando el buffer, el nombre y 
       // la poblacion total de cada uno
       features.forEach((feature) => {
-        console.log("Nombre: " + feature.attributes["NAME"]);
-        console.log("Poblacion total: " + feature.attributes["TOTPOP_CY"]);
-        console.log("--------------------------------------------");
+        console.log(`Nombre: ${feature.attributes.NAME}`);
+        console.log(`Poblacion total: ${feature.attributes.TOTPOP_CY}`);
+        console.log('--------------------------------------------');
         const condado = new Graphic(feature.geometry, rellenoCondados);
         this.condadosAbarcados.push(feature);
         this.condadosAbarcadosGraphics.push(condado);
@@ -248,12 +268,11 @@ class Map extends Component {
         this.map.graphics.add(condado);
       });
 
-      console.log("*****************************************");
-      console.log("*****************************************");
+      console.log('*****************************************');
+      console.log('*****************************************');
 
       //Calculo la intersección de cada condado con el buffer
       this.gsvc.intersect(this.geometriaCondados, this.bufferGeometry, this.calcularInterseccion);
-
     });
   }
 
@@ -314,7 +333,11 @@ class Map extends Component {
   updateCarPosition(coordinates, shouldSetSpatialReference) {
     esriLoader.dojoRequire([
       'esri/geometry/Point',
-    ], (Point) => {
+      'esri/symbols/SimpleMarkerSymbol',
+      'dojo/_base/Color',
+      'esri/tasks/BufferParameters',
+      'esri/tasks/GeometryService',
+    ], (Point, SimpleMarkerSymbol, Color, BufferParameters, GeometryService) => {
       let p;
       if (shouldSetSpatialReference) {
         p = new Point(coordinates[0], coordinates[1])
@@ -324,10 +347,55 @@ class Map extends Component {
       console.log('updating car', p)
       this.car.setGeometry(p)
 
-      this.doBuffer(p);
+      // update color from speed
+      const percentage = (this.props.speed / this.props.maxTimer) * 100
+      console.log('Percentage: ', percentage)
+      const color = this.getColorForPercentage(percentage)
+      console.log(color)
+      const symbol = new SimpleMarkerSymbol().setStyle(SimpleMarkerSymbol.STYLE_CIRCLE).setColor(new Color([...color, 0.5]));
+      this.car.setSymbol(symbol);
+
+      this.doBuffer(p, BufferParameters, GeometryService);
       // this.car.show()
     })
   }
+
+  getColorForPercentage = (pct) => {
+    const hslToRgb = (h, s, l) => {
+      let r,
+        g,
+        b;
+
+      if (s == 0) {
+        r = g = b = l; // achromatic
+      } else {
+        const hue2rgb = (p, q, t) => {
+          if (t < 0) t += 1;
+          if (t > 1) t -= 1;
+          if (t < 1 / 6) return p + (q - p) * 6 * t;
+          if (t < 1 / 2) return q;
+          if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+          return p;
+        }
+
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + (1 / 3));
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - (1 / 3));
+      }
+
+      return [Math.floor(r * 255), Math.floor(g * 255), Math.floor(b * 255)];
+    }
+    // as the function expects a value between 0 and 1, and red = 0° and green = 120°
+    // we convert the input to the appropriate hue value
+    const hue = (pct * 1.2) / 360;
+    // we convert hsl to rgb (saturation 100%, lightness 50%)
+    const rgb = hslToRgb(hue, 1, 0.5);
+    // we format to css value and return
+    return rgb;
+  }
+
 
   hidePopup() {
     this.map.infoWindow.hide()
@@ -365,11 +433,42 @@ class Map extends Component {
     });
   }
 
+  printMap() {
+    this.props.loading(true)
+    esriLoader.dojoRequire([
+      'esri/tasks/PrintTask',
+      'esri/tasks/PrintParameters',
+      'esri/tasks/PrintTemplate'
+    ], (PrintTask, PrintParameters, PrintTemplate) => {
+      this.printTask = new PrintTask('http://sampleserver5.arcgisonline.com/arcgis/rest/services/Utilities/PrintingTools/GPServer/Export%20Web%20Map%20Task')
+      const template = new PrintTemplate();
+      // template.exportOptions = {
+      //   width: 500,
+      //   height: 400,
+      //   dpi: 96
+      // };
+      template.format = 'PDF';
+      template.preserveScale = false;
+
+      const params = new PrintParameters();
+      params.map = this.map;
+      params.template = template;
+
+      this.printTask.execute(params, (res) => {
+        window.open(res.url, '_blank')
+        this.props.loading(false)
+      }, (error) => {
+        this.props.loading(false)
+      })
+    })
+  }
+
   render() {
     return (
         <div className="main">
           <div className="row">
             <div id="map-container" className="col-md-8">
+              <i className="fa fa-print print-icon" aria-hidden="true" onClick={this.printMap}></i>
             </div>
             <div className="col-md-4">
               <div className="childs-container">
@@ -384,4 +483,4 @@ class Map extends Component {
   }
 }
 
-export default Map;
+export default Map
