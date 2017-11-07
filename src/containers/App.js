@@ -22,6 +22,7 @@ class App extends Component {
     this.state = {
       firstPoint: true,
       speed: MAX_MS_TIMER,
+      tam_buffer: 10,
       stops: [],
       destinations: [],
       serverFeatures: [],
@@ -315,7 +316,8 @@ class App extends Component {
           <Spinner name="three-bounce" color="floralWhite"/>
         </div>
       )}
-      <Map ref="map" loading={this.props.loading} maxTimer={MAX_MS_TIMER} minTimer={MIN_MS_TIMER} speed={this.state.speed}>
+      <Map ref="map" loading={this.props.loading} maxTimer={MAX_MS_TIMER} minTimer={MIN_MS_TIMER} speed={this.state.speed}
+        tam_buffer={this.state.tam_buffer}>
         <GeocodeSearchInput
           onSelectLocation={this.onSelectLocation}
           placeholder='Ingrese una ubicación'
@@ -395,6 +397,16 @@ class App extends Component {
             maxValue={MAX_MS_TIMER}
             onChange={(speed) => { this.setState({speed: MAX_MS_TIMER - speed}) }}
             onChangeComplete={this.onChangeSpeed}
+            formatLabel={() => ''}
+          />
+        </div>
+        <div className="tam_buffer">
+          Tamaño buffer: { this.state.tam_buffer } km
+          <InputRange
+            value={ this.state.tam_buffer }
+            minValue={0}
+            maxValue={1000}
+            onChange={(value) => { this.setState({ tam_buffer: value }) }}
             formatLabel={() => ''}
           />
         </div>

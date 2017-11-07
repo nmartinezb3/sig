@@ -8,11 +8,10 @@ class Map extends Component {
   constructor(props) {
     super(props);
 
-    this.RADIO_BUFFER = 10;
-
     this.state = {
       time: 1000,
       condados: [],
+      poblacion_total: 0,
     };
 
     this.stops = [];
@@ -27,8 +26,8 @@ class Map extends Component {
     this.removeCar = this.removeCar.bind(this);
     this.mostrarInfoCondados = this.mostrarInfoCondados.bind(this);
     this.calcularInterseccion = this.calcularInterseccion.bind(this);
-    this.calcularAreas = this.calcularAreas.bind(this);
-    this.printMap = this.printMap.bind(this)
+    this.calcularPoblacion = this.calcularPoblacion.bind(this);
+    this.printMap = this.printMap.bind(this);
   }
 
   componentDidMount() {
@@ -66,10 +65,8 @@ class Map extends Component {
         zoom: 5
       });
 
-      const info = new InfoTemplate('Nombre: ${NAME}', 'Población Total: ${TOTPOP_CY}');
       this.layerPoblacion = new FeatureLayer('https://services.arcgisonline.com/arcgis/rest/services/Demographics/USA_1990-2000_Population_Change/MapServer/3', {
-        outFields: ['ID', 'NAME', 'TOTPOP_CY', 'LANDAREA'],
-        infoTemplate: info
+        outFields: ['ID', 'NAME', 'TOTPOP_CY', 'LANDAREA']
       });
 
       this.setState({
@@ -220,7 +217,7 @@ class Map extends Component {
         new Color([0, 0, 255, 0])
       );
 
-      // borro buffer anterior
+      // Borro buffer anterior
       this.map.graphics.remove(this.buffer);
       this.bufferGeometry = bufferedGeometries[0];
       this.buffer = new Graphic(this.bufferGeometry, symbol);
@@ -243,26 +240,25 @@ class Map extends Component {
 
       // Limpio condados mostrados anteriormente
       this.condadosAbarcadosGraphics.forEach(condado => this.map.graphics.remove(condado));
+      this.geometriaCondados = []; 
+      this.condadosAbarcados = [];
+      this.condadosAbarcadosGraphics = [];
 
       const rellenoCondados = new SimpleFillSymbol(
         SimpleFillSymbol.STYLE_SOLID,
         new SimpleLineSymbol(
           SimpleLineSymbol.STYLE_SOLID,
-          new Color([70, 255, 150, 0.65]), 2
+          new Color([65, 244, 131, 0.65]), 2
         ),
-        new Color([70, 255, 150, 0.35])
+        new Color([65, 244, 131, 0.35])
       );
-
-      this.geometriaCondados = []; 
-      this.condadosAbarcados = [];
-      this.condadosAbarcadosGraphics = [];
 
       // Esto muestra los condados que va abarcando el buffer, el nombre y 
       // la poblacion total de cada uno
       features.forEach((feature) => {
-        console.log(`Nombre: ${feature.attributes.NAME}`);
-        console.log(`Poblacion total: ${feature.attributes.TOTPOP_CY}`);
-        console.log('--------------------------------------------');
+        // console.log(`Nombre: ${feature.attributes.NAME}`);
+        // console.log(`Poblacion total: ${feature.attributes.TOTPOP_CY}`);
+        // console.log('--------------------------------------------');
         const condado = new Graphic(feature.geometry, rellenoCondados);
         this.condadosAbarcados.push(feature);
         this.condadosAbarcadosGraphics.push(condado);
@@ -270,8 +266,7 @@ class Map extends Component {
         this.map.graphics.add(condado);
       });
 
-      console.log('*****************************************');
-      console.log('*****************************************');
+      //console.log('*****************************************');
 
       //Calculo la intersección de cada condado con el buffer
       this.gsvc.intersect(this.geometriaCondados, this.bufferGeometry, this.calcularInterseccion);
@@ -291,15 +286,17 @@ class Map extends Component {
       this.areasAndLengthParams.areaUnit = GeometryService.UNIT_SQUARE_KILOMETERS;
       this.areasAndLengthParams.calculationType = "geodesic";
       this.areasAndLengthParams.polygons = geometries;
-      this.gsvc.areasAndLengths(this.areasAndLengthParams, this.calcularAreas);
+      this.gsvc.areasAndLengths(this.areasAndLengthParams, this.calcularPoblacion);
 
     });
   }
 
 
-  calcularAreas(interseccionBuffer){
+  // Se calcula una poblacion estimada a partir de la interseccion del buffer con cada condado
+  calcularPoblacion(interseccionBuffer){
     var areasIntersectadas = interseccionBuffer.areas;
     let infoCondados = [];
+    let poblacionTotal = 0;
     var i = 0;
     this.condadosAbarcados.forEach(condado => {
       const areaTotal = condado.attributes["LANDAREA"] * 2.59;
@@ -309,18 +306,15 @@ class Map extends Component {
         poblacion_total: condado.attributes["TOTPOP_CY"],
         area_int: areasIntersectadas[i],
       };
-      // nuevoCondado.nombre = condado.attributes["NAME"];
-      // nuevoCondado.area_total = condado.attributes["LANDAREA"] * 2.59; //Esto es para convertir de millas cuadradas a km2
-      // nuevoCondado.poblacion_total = condado.attributes["TOTPOP_CY"];
-      // nuevoCondado.area_int = areasIntersectadas[i];
       nuevoCondado.poblacion_est = Math.round((nuevoCondado.area_int * nuevoCondado.poblacion_total) / nuevoCondado.area_total);
-
+      poblacionTotal = poblacionTotal + nuevoCondado.poblacion_est;
       infoCondados.push(nuevoCondado);
-
-      //console.log(nombreCondado + "- Población Total: " + poblacionTotalCondado + " - Población Intersectada: " + poblacionIntersectadaCondado);
       i = i + 1;
     })
-    this.setState({condados: infoCondados});
+    this.setState({
+      condados: infoCondados,
+      poblacion_total: poblacionTotal,
+    });
   }
 
   doBuffer(point) {
@@ -330,7 +324,7 @@ class Map extends Component {
     ], (BufferParameters, GeometryService) => {
       const params = new BufferParameters();
       params.geometries = [point];
-      params.distances = [this.RADIO_BUFFER];
+      params.distances = [this.props.tam_buffer];
       params.outSpatialReference = this.map.spatialReference;
       params.unit = GeometryService.UNIT_KILOMETER;
 
@@ -478,7 +472,18 @@ class Map extends Component {
         <div className="main">
             <div className="row">
                 <div id="map-container" className="col-md-8">
-                <i className="fa fa-print print-icon" aria-hidden="true" onClick={this.printMap}></i>
+                  <i className="fa fa-print print-icon" aria-hidden="true" onClick={this.printMap}></i>
+                  <div className="info-condados">
+                    {this.state.condados.length > 0 && (
+                      <h3>Población estimada:</h3>
+                    )}
+                      {this.state.condados.map((condado, index) => (
+                        <p> <b>{condado.nombre} : {condado.poblacion_est} </b> </p>
+                      ))}
+                      {this.state.condados.length > 0 && (
+                        <h3>Población total: {this.state.poblacion_total}</h3>
+                      )}
+                  </div>
                 </div>
                 <div className="col-md-4">
                     <div className="childs-container">
@@ -486,20 +491,6 @@ class Map extends Component {
                         this.props.children.map((ch, index) => React.cloneElement(ch, { map: this.map, key: index }))
                         }
                     </div>
-                </div>
-            </div>
-            <div className="row">
-                <div>
-                    Condados abarcados:
-                    {
-                        this.state.condados.map((condado, index) => (
-                            <h3> {condado.nombre} : {condado.poblacion_est} </h3>
-                            // <p> Población total: {condado.attributes.poblacion_total} </p>
-                            // <p>Área total: {condado.attributes.area_total}</p>
-                            // <p>Área intersectada: {condado.attributes.area_int}</p>
-                            // <p>Población estimada: {condado.attributes.poblacion_est}</p>
-                        ))
-                    }
                 </div>
             </div>
         </div>
