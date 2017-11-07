@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 
 import * as esriLoader from 'esri-loader';
-
+import _ from 'underscore'
 import '../styles/Map.css'
 
 class Map extends Component {
@@ -62,7 +62,7 @@ class Map extends Component {
       this.map = new Map('map-container', {
         basemap: 'topo',
         center: [-97.00, 39.90],
-        zoom: 5
+        zoom: 4
       });
 
       this.layerPoblacion = new FeatureLayer('https://services.arcgisonline.com/arcgis/rest/services/Demographics/USA_1990-2000_Population_Change/MapServer/3', {
@@ -117,6 +117,7 @@ class Map extends Component {
       'esri/graphic',
     ], (SimpleMarkerSymbol, Color, Graphic) => {
       const point = data.result.feature.geometry;
+      point.setSpatialReference(this.map.spatialReference)
       const symbol = new SimpleMarkerSymbol()
         .setStyle(SimpleMarkerSymbol.STYLE_CROSS)
         .setColor(new Color([255, 0, 0, 0.5]))
@@ -129,7 +130,7 @@ class Map extends Component {
       this.map.infoWindow.setTitle(title);
       this.map.infoWindow.setContent(data.result.name);
       this.map.infoWindow.show(data.result.feature.geometry);
-      onMarkerAdded(graphic)
+      onMarkerAdded(_.clone(graphic))
     })
   }
 
@@ -236,11 +237,11 @@ class Map extends Component {
       'esri/Color',
       'esri/graphic',
     ], (SimpleFillSymbol, SimpleLineSymbol, Color, Graphic) => {
-      var features = response.features;
+      const features = response.features;
 
       // Limpio condados mostrados anteriormente
       this.condadosAbarcadosGraphics.forEach(condado => this.map.graphics.remove(condado));
-      this.geometriaCondados = []; 
+      this.geometriaCondados = [];
       this.condadosAbarcados = [];
       this.condadosAbarcadosGraphics = [];
 
@@ -253,7 +254,7 @@ class Map extends Component {
         new Color([65, 244, 131, 0.35])
       );
 
-      // Esto muestra los condados que va abarcando el buffer, el nombre y 
+      // Esto muestra los condados que va abarcando el buffer, el nombre y
       // la poblacion total de cada uno
       features.forEach((feature) => {
         // console.log(`Nombre: ${feature.attributes.NAME}`);
@@ -266,50 +267,48 @@ class Map extends Component {
         this.map.graphics.add(condado);
       });
 
-      //console.log('*****************************************');
+      // console.log('*****************************************');
 
-      //Calculo la intersección de cada condado con el buffer
+      // Calculo la intersección de cada condado con el buffer
       this.gsvc.intersect(this.geometriaCondados, this.bufferGeometry, this.calcularInterseccion);
     });
   }
 
   // Calcula el area de la interseccion de cada condado con el buffer
-  calcularInterseccion(geometries){    
+  calcularInterseccion(geometries) {
     esriLoader.dojoRequire([
       'esri/tasks/BufferParameters',
       'esri/tasks/GeometryService',
       'esri/tasks/AreasAndLengthsParameters',
     ], (BufferParameters, GeometryService, AreasAndLengthsParameters) => {
-
       this.areasAndLengthParams = new AreasAndLengthsParameters();
       this.areasAndLengthParams.lengthUnit = GeometryService.UNIT_KILOMETER;
       this.areasAndLengthParams.areaUnit = GeometryService.UNIT_SQUARE_KILOMETERS;
-      this.areasAndLengthParams.calculationType = "geodesic";
+      this.areasAndLengthParams.calculationType = 'geodesic';
       this.areasAndLengthParams.polygons = geometries;
       this.gsvc.areasAndLengths(this.areasAndLengthParams, this.calcularPoblacion);
-
     });
   }
 
 
   // Se calcula una poblacion estimada a partir de la interseccion del buffer con cada condado
-  calcularPoblacion(interseccionBuffer){
-    var areasIntersectadas = interseccionBuffer.areas;
-    let infoCondados = [];
+  calcularPoblacion(interseccionBuffer) {
+    const areasIntersectadas = interseccionBuffer.areas;
+    const infoCondados = [];
     let poblacionTotal = 0;
-    var i = 0;
-    this.condadosAbarcados.forEach(condado => {
-      const areaTotal = condado.attributes["LANDAREA"] * 2.59;
-      let nuevoCondado = {
-        nombre:  condado.attributes["NAME"], 
+    let i = 0;
+    this.condadosAbarcados.forEach((condado) => {
+      const areaTotal = condado.attributes.LANDAREA * 2.59;
+      const nuevoCondado = {
+        nombre: condado.attributes.NAME,
         area_total: areaTotal,
-        poblacion_total: condado.attributes["TOTPOP_CY"],
+        poblacion_total: condado.attributes.TOTPOP_CY,
         area_int: areasIntersectadas[i],
       };
       nuevoCondado.poblacion_est = Math.round((nuevoCondado.area_int * nuevoCondado.poblacion_total) / nuevoCondado.area_total);
-      poblacionTotal = poblacionTotal + nuevoCondado.poblacion_est;
+      poblacionTotal += nuevoCondado.poblacion_est;
       infoCondados.push(nuevoCondado);
-      i = i + 1;
+      i += 1;
     })
     this.setState({
       condados: infoCondados,
@@ -473,17 +472,16 @@ class Map extends Component {
             <div className="row">
                 <div id="map-container" className="col-md-8">
                   <i className="fa fa-print print-icon" aria-hidden="true" onClick={this.printMap}></i>
-                  <div className="info-condados">
-                    {this.state.condados.length > 0 && (
-                      <h3>Población estimada:</h3>
-                    )}
+                  {this.props.navigationActive && this.state.condados.length > 0 && (
+                    <div className="info-condados">
                       {this.state.condados.map((condado, index) => (
                         <p> <b>{condado.nombre} : {condado.poblacion_est} </b> </p>
                       ))}
                       {this.state.condados.length > 0 && (
-                        <h3>Población total: {this.state.poblacion_total}</h3>
+                        <h6>Población total: {this.state.poblacion_total}</h6>
                       )}
                   </div>
+                )}
                 </div>
                 <div className="col-md-4">
                     <div className="childs-container">

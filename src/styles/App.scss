@@ -42,11 +42,8 @@
   justify-content: space-between;
   align-items: center;
 }
-.speed {
+.speed, .tam_buffer {
   margin-left: 17px;
-  // transform: rotateZ(180deg);
-  input {
-  }
 }
 
 .destinations {

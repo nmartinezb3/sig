@@ -18,6 +18,23 @@
   font-size: 28px;
   cursor: pointer;
 }
+
+.info-condados {
+  font-size: 11px;
+  overflow: auto;
+  width: 200px;
+  position: absolute;
+  z-index: 999;
+  bottom: 20px;
+  left: 31px;
+  background-color: rgba(0, 0, 0, .43);
+  color: white;
+  padding: 5px;
+  border-radius: 7px;
+  box-shadow: 0px 3px 12px 12px rgba(0, 0, 0, 0.43);
+  max-height: 94%;
+  overflow: auto;
+}
 //
 // -webkit-animation-duration: 3s;
 // -webkit-animation-iteration-count: infinite;

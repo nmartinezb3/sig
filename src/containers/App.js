@@ -88,12 +88,6 @@ class App extends Component {
           routeQuery,
           (featureSet) => {
             const results = featureSet.features
-            //   .filter(feature => feature.attributes.notes && feature.attributes.notes.includes('--sig2017g2'))
-            //   .map((feature) => {
-            //     feature.attributes.notes = feature.attributes.notes.slice(0, -11)
-            //     return feature
-            //   })
-            // debugger
             this.setState({
               serverRoutes: results
             })
@@ -287,11 +281,6 @@ class App extends Component {
   }
 
   onSelectPreviousRoute(route) {
-    // debugger
-    // this.setState({
-    //   routeKm: route.attributes.Total_Kilometers,
-    //   routeName: route.attributes.Name
-    // })
     const sr = route.geometry.spatialReference
     const start = route.geometry.paths[0][0]
     const end = route.geometry.paths[0][route.geometry.paths[0].length - 1]
@@ -300,7 +289,8 @@ class App extends Component {
     this.refs.map.addRoute(route)
     this.setState({
       stops: [start, end],
-      selectedRoute: route
+      selectedRoute: route,
+      destinations: route.attributes.notes.split('-')
     })
     this.hasSelectedAPreviousRoute = true
   }
@@ -317,7 +307,7 @@ class App extends Component {
         </div>
       )}
       <Map ref="map" loading={this.props.loading} maxTimer={MAX_MS_TIMER} minTimer={MIN_MS_TIMER} speed={this.state.speed}
-        tam_buffer={this.state.tam_buffer}>
+        tam_buffer={this.state.tam_buffer} navigationActive={this.state.navigationActive}>
         <GeocodeSearchInput
           onSelectLocation={this.onSelectLocation}
           placeholder='Ingrese una ubicación'
@@ -383,14 +373,6 @@ class App extends Component {
         </button>
         <div className="speed">
           Velocidad:
-          {/* <input
-            type="range"
-            name="points"
-            min={MIN_MS_TIMER}
-            max={MAX_MS_TIMER}
-            value={this.state.speed}
-            onChange={this.onChangeSpeed}
-          /> */}
           <InputRange
             value={MAX_MS_TIMER + (1 - this.state.speed) }
             minValue={MIN_MS_TIMER}
@@ -404,8 +386,8 @@ class App extends Component {
           Tamaño buffer: { this.state.tam_buffer } km
           <InputRange
             value={ this.state.tam_buffer }
-            minValue={0}
-            maxValue={1000}
+            minValue={1}
+            maxValue={50}
             onChange={(value) => { this.setState({ tam_buffer: value }) }}
             formatLabel={() => ''}
           />
