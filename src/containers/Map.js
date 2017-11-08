@@ -172,9 +172,6 @@ class Map extends Component {
       const graphic = new Graphic(point, symbol);
       const stop = this.map.graphics.add(graphic);
       this.stops.push(stop)
-      // this.map.infoWindow.setTitle(title);
-      // this.map.infoWindow.setContent('');
-      // this.map.infoWindow.show(point);
       this.map.centerAt(point);
     })
   }
@@ -186,9 +183,9 @@ class Map extends Component {
       'esri/Color', 'esri/InfoTemplate', 'esri/graphic', 'esri/tasks/BufferParameters',
       'esri/tasks/GeometryService',
     ], (Point, SimpleMarkerSymbol, Color, InfoTemplate, Graphic, BufferParameters, GeometryService) => {
-      const pt = new Point(coordinates[0], coordinates[1], this2.map.spatialReference)// , this2.map.spatialReference
+      const pt = new Point(coordinates[0], coordinates[1], this2.map.spatialReference)
 
-      // update color from speed
+      // Actualizar color a partir de la velocidad
       const percentage = (this2.props.speed / this2.props.maxTimer) * 100
       const color = this2.getColorForPercentage(percentage)
       const sms = new SimpleMarkerSymbol().setStyle(SimpleMarkerSymbol.STYLE_CIRCLE).setColor(new Color([...color, 0.5]));
@@ -266,8 +263,6 @@ class Map extends Component {
         this.geometriaCondados.push(feature.geometry);
         this.map.graphics.add(condado);
       });
-
-      // console.log('*****************************************');
 
       // Calculo la intersección de cada condado con el buffer
       this.gsvc.intersect(this.geometriaCondados, this.bufferGeometry, this.calcularInterseccion);
@@ -348,14 +343,11 @@ class Map extends Component {
       } else {
         p = new Point(coordinates[0], coordinates[1], this.map.spatialReference)
       }
-      console.log('updating car', p)
       this.car.setGeometry(p)
 
       // update color from speed
       const percentage = (this.props.speed / this.props.maxTimer) * 100
-      console.log('Percentage: ', percentage)
       const color = this.getColorForPercentage(percentage)
-      console.log(color)
       const symbol = new SimpleMarkerSymbol().setStyle(SimpleMarkerSymbol.STYLE_CIRCLE).setColor(new Color([...color, 0.5]));
       this.car.setSymbol(symbol);
 
@@ -369,7 +361,7 @@ class Map extends Component {
         g,
         b;
 
-      if (s == 0) {
+      if (s === 0) {
         r = g = b = l; // achromatic
       } else {
         const hue2rgb = (p, q, t) => {
@@ -390,12 +382,8 @@ class Map extends Component {
 
       return [Math.floor(r * 255), Math.floor(g * 255), Math.floor(b * 255)];
     }
-    // as the function expects a value between 0 and 1, and red = 0° and green = 120°
-    // we convert the input to the appropriate hue value
     const hue = (pct * 1.2) / 360;
-    // we convert hsl to rgb (saturation 100%, lightness 50%)
     const rgb = hslToRgb(hue, 1, 0.5);
-    // we format to css value and return
     return rgb;
   }
 
@@ -414,7 +402,6 @@ class Map extends Component {
     ], (RouteTask, RouteParameters, SimpleLineSymbol, FeatureSet, Color) => {
       this.routeTask = new RouteTask('https://route.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World');
 
-      // setup the route parameters
       const routeParams = new RouteParameters();
       routeParams.stops = new FeatureSet();
       routeParams.outSpatialReference = {
@@ -426,7 +413,6 @@ class Map extends Component {
         const routeResult = evt.result.routeResults[0]
         this.map.graphics.add(routeResult.route.setSymbol(routeSymbol));
         this.hidePopup()
-        // this.startNavigation(routeResult.route.geometry.paths)
       });
       this.routeTask.on('error', (err) => {
         console.error(err)
@@ -445,11 +431,6 @@ class Map extends Component {
     ], (PrintTask, PrintParameters, PrintTemplate) => {
       this.printTask = new PrintTask('http://sampleserver5.arcgisonline.com/arcgis/rest/services/Utilities/PrintingTools/GPServer/Export%20Web%20Map%20Task')
       const template = new PrintTemplate();
-      // template.exportOptions = {
-      //   width: 500,
-      //   height: 400,
-      //   dpi: 96
-      // };
       template.format = 'PDF';
       template.preserveScale = false;
 
@@ -475,7 +456,7 @@ class Map extends Component {
                   {this.props.navigationActive && this.state.condados.length > 0 && (
                     <div className="info-condados">
                       {this.state.condados.map((condado, index) => (
-                        <p> <b>{condado.nombre} : {condado.poblacion_est} </b> </p>
+                        <p key={index}> <b>{condado.nombre} : {condado.poblacion_est} </b> </p>
                       ))}
                       {this.state.condados.length > 0 && (
                         <h6>Población total: {this.state.poblacion_total}</h6>

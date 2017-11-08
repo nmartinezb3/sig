@@ -63,14 +63,12 @@ class GPS {
       routeParams.outSpatialReference = {
         wkid: 102100
       };
-      // stops.map(stop => stop.result.feature.geometry)
       routeParams.stops.features = features
 
       routeTask.on('solve-complete', (evt) => {
         const routeResult = evt.result.routeResults[0]
         routeResult.route.attributes.notes = routeResult.route.attributes.Name
         routeResult.route.attributes.trailtype = 19178
-
         onRouteLoadedCallback(routeResult.route)
 
         this.coordinates = routeResult.route.geometry.paths[0]
@@ -84,7 +82,6 @@ class GPS {
       });
 
       routeTask.on('error', (err) => {
-        console.error(err)
       });
       routeTask.solve(routeParams)
     });

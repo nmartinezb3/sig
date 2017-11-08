@@ -7,7 +7,6 @@ const initialState = {
 const main = (state = initialState, action) => {
   switch (action.type) {
     case ActionTypes.LOADING:
-      console.log(action.data)
       return {
         ...state,
         loading: action.data ? state.loading + 1 : state.loading - 1

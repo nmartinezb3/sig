@@ -44,7 +44,6 @@ class App extends Component {
       if (err) {
         console.error(err);
       } else {
-        console.log('ESRI loaded')
         this.login();
         this.loadFeatureServer()
         this.props.loading(false)
@@ -91,6 +90,7 @@ class App extends Component {
             this.setState({
               serverRoutes: results
             })
+            console.log(results)
             this.props.loading(false)
           },
           (error) => {
@@ -134,7 +134,7 @@ class App extends Component {
       this.featureLayer.applyEdits(
         [graphic], null, null,
         (result) => {
-          console.log(result)
+          // console.log(result)
         },
         (error) => {
           console.error(error)
@@ -158,11 +158,11 @@ class App extends Component {
     this.refs.map.hidePopup()
     this.props.loading(true)
     if (!this.hasSelectedAPreviousRoute) {
-      // has selected origin and destination, must calculate route
+      // Selecciono origen y destino, el gps calcula la ruta
       this.gps.startNavigation(
         this.state.stops, this.state.speed,
         (coordinate, isFirst) => {
-          // on new coordinate
+          // el gps tiene una nueva coordenada
           if (isFirst) {
             this.refs.map.addCar(coordinate)
             this.setState({
@@ -174,7 +174,7 @@ class App extends Component {
           console.log(coordinate)
         },
         (route) => {
-          // on route loaded
+          // cargo la ruta
           this.setState({
             routeKm: route.attributes.Total_Kilometers,
             routeName: route.attributes.Name
@@ -182,18 +182,18 @@ class App extends Component {
           this.routesFeatureLayer.applyEdits(
             [route], null, null,
             (result) => {
-              // console.log(result)
               this.refs.map.addRoute(route)
               this.props.loading(false)
+              // console.log('Ruta subida a ESRI')
             },
             (error) => {
-              // console.error(error)
               this.props.loading(false)
+              // console.log('Error al subir ruta a ESRI')
             }
           );
         },
         () => {
-          // on finish navigation
+          // Termino la navegacion
           this.setState({
             navigationActive: false
           })
@@ -203,7 +203,7 @@ class App extends Component {
       this.gps.startNavigationWithOldRoute(
         this.state.selectedRoute, this.state.speed,
         (coordinate, isFirst) => {
-          // on new coordinate
+          // el gps tiene una nueva coordenada
           if (isFirst) {
             this.refs.map.addCar(coordinate)
             this.props.loading(false)
@@ -217,7 +217,7 @@ class App extends Component {
           console.log(coordinate)
         },
         () => {
-          // on finish navigation
+          // Termino la navegacion
           this.setState({
             navigationActive: false,
             selectedRoute: undefined
@@ -257,10 +257,8 @@ class App extends Component {
         this.setState({
           serverFeatures: []
         })
-        console.log(result)
       },
       (error) => {
-        console.error(error)
       }
     );
   }
@@ -272,10 +270,8 @@ class App extends Component {
         this.setState({
           serverRoutes: []
         })
-        console.log(result)
       },
       (error) => {
-        console.error(error)
       }
     );
   }
@@ -356,7 +352,6 @@ class App extends Component {
             ))
           }
       </ul>
-
 
         <div className="destinations">{this.state.stops.length > 0 && <span>Destinos seleccionados:</span>}</div>
         <ul className="list-group">
